@@ -56,7 +56,7 @@
             color: #8e8e93;
             border-color: #d1d1d6;
         }
-
+        
         .keypad-container {
             display: flex;
             flex-direction: column;
@@ -64,7 +64,7 @@
             width: 100%;
             max-width: 300px;
         }
-
+        
         .keypad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -106,7 +106,7 @@
         .btn-zero {
             grid-column: 2;
         }
-
+        
         .nav-buttons {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -115,7 +115,7 @@
         }
         .prev-container { grid-column: 1; display: flex; justify-content: center; }
         .next-container { grid-column: 3; display: flex; justify-content: center; }
-
+        
         .nav-btn {
             background-color: #f8f9fa;
             border: 1px solid #ccc;
@@ -152,7 +152,7 @@
 </head>
 <body>
     <h1>St. Michael Chaplet</h1>
-
+    
     <div class="header-buttons">
         <button id="btn-opening" class="action-btn" onclick="speak('opening')">Opening Prayer</button>
         <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;">Reset</button>
@@ -169,7 +169,7 @@
             <button id="btn-7" class="btn" onclick="speak(7)">7</button>
             <button id="btn-8" class="btn" onclick="speak(8)">8</button>
             <button id="btn-9" class="btn" onclick="speak(9)">9</button>
-
+            
             <div class="prev-container"></div>
             <button id="btn-0" class="btn btn-zero" onclick="speak(0)">0</button>
             <div class="next-container">
@@ -177,11 +177,12 @@
             </div>
         </div>
     </div>
-
+    
     <div id="status"></div>
     <div class="subtitle">1-9: Salutations | 0: Closing Prayers</div>
 
     <script>
+        // TTS Fallback Text
         const prayers = {
             'opening': "O God, come to my assistance. O Lord, make haste to help me. Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now and ever shall be, world without end. Amen.",
             1: "By the intercession of Saint Michael and the celestial Choir of Seraphim, may the Lord make us worthy to burn with the fire of perfect charity. Amen.",
@@ -199,8 +200,13 @@
         let currentPrayer = null;
         let isSpeaking = false;
         let mediaSessionInitialized = false;
-        let wakeLock = null; // Variable to hold the screen wake lock
+        let wakeLock = null; 
+        
+        // Primary Audio Player for MP3s
+        const audioPlayer = new Audio();
+        audioPlayer.playsInline = true;
 
+        // Silent audio for TTS fallback (to hook iOS media controls)
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -210,7 +216,7 @@
             const numSamples = sampleRate * 5; 
             const buffer = new ArrayBuffer(44 + numSamples * 2);
             const view = new DataView(buffer);
-
+            
             view.setUint32(0, 0x52494646, false);
             view.setUint32(4, 36 + numSamples * 2, true);
             view.setUint32(8, 0x57415645, false);
@@ -224,44 +230,37 @@
             view.setUint16(34, 16, true);
             view.setUint32(36, 0x64617461, false);
             view.setUint32(40, numSamples * 2, true);
-
-            const blob = new Blob([buffer], { type: 'audio/wav' });
-            return URL.createObjectURL(blob);
+            
+            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
         }
 
         silentAudio.src = createSilentAudioURL();
 
-        // Function to prevent screen from sleeping
+        // Screen Wake Lock
         async function requestWakeLock() {
-            if (!('wakeLock' in navigator)) return; // Browser doesn't support it
-
+            if (!('wakeLock' in navigator)) return; 
             try {
-                if (wakeLock !== null && wakeLock.released === false) return; // Already locked
+                if (wakeLock !== null && wakeLock.released === false) return; 
                 wakeLock = await navigator.wakeLock.request('screen');
             } catch (err) {
                 console.error('Wake Lock error:', err);
             }
         }
 
-        // Function to release the screen lock to save battery
         function releaseWakeLock() {
             if (wakeLock !== null) {
-                wakeLock.release().then(() => {
-                    wakeLock = null;
-                });
+                wakeLock.release().then(() => { wakeLock = null; });
             }
         }
 
-        // Re-acquire lock if user switches apps and comes back while chaplet is active
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible' && currentPrayer !== null) {
                 await requestWakeLock();
             }
         });
 
+        // Setup Headset Controls
         function initMediaSession() {
-            silentAudio.play().catch(e => console.log("Audio lock failed:", e));
-
             if (!mediaSessionInitialized) {
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
@@ -269,20 +268,15 @@
                         artist: 'Tap headset to play next'
                     });
 
-                    const handleHeadset = () => {
-                        silentAudio.play().catch(e=>console.log(e));
-                        playNext();
-                    };
-
+                    const handleHeadset = () => { playNext(); };
                     navigator.mediaSession.setActionHandler('play', handleHeadset);
                     navigator.mediaSession.setActionHandler('pause', handleHeadset);
                     navigator.mediaSession.setActionHandler('nexttrack', handleHeadset);
                 }
 
+                // TTS Fallback trap: if OS pauses the silent audio via headset
                 silentAudio.addEventListener('pause', () => {
-                    if (!isSpeaking) {
-                        playNext();
-                    }
+                    if (!isSpeaking) playNext();
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
                 });
 
@@ -292,11 +286,8 @@
 
         function updateButtonColors(activeId) {
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') {
-                    btn.classList.remove('active-prayer');
-                }
+                if (btn.id !== 'btn-reset') btn.classList.remove('active-prayer');
             });
-
             if (activeId !== null) {
                 const btn = document.getElementById(`btn-${activeId}`);
                 if (btn) {
@@ -315,12 +306,14 @@
         }
 
         function resetState() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            
             currentPrayer = null;
-            releaseWakeLock(); // Let the screen sleep again
-
+            isSpeaking = false;
+            releaseWakeLock(); 
+            
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
                 if (btn.id !== 'btn-reset') {
                     btn.classList.remove('active-prayer');
@@ -345,38 +338,58 @@
 
         function speak(id) {
             const statusDiv = document.getElementById('status');
-
-            if (!('speechSynthesis' in window)) {
-                statusDiv.innerText = "Text-to-Speech not supported.";
-                return;
-            }
-
             initMediaSession();
-            requestWakeLock(); // Keep screen awake!
+            requestWakeLock();
 
-            window.speechSynthesis.cancel();
+            // Stop any current audio
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
             currentPrayer = id;
             updateButtonColors(id);
 
+            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            statusDiv.innerText = `Playing: ${displayText}...`;
+            isSpeaking = true;
+
+            // Attempt to load and play the MP3 file
+            audioPlayer.src = `audio/${id}.mp3`;
+            
+            audioPlayer.play().then(() => {
+                // MP3 found and playing
+                audioPlayer.onended = () => {
+                    isSpeaking = false;
+                    if (currentPrayer === id) {
+                        markAsPlayed(id);
+                        statusDiv.innerText = "";
+                    }
+                };
+            }).catch((e) => {
+                // MP3 failed (e.g. 404 Not Found) - Fall back to TTS
+                playTTS(id, displayText, statusDiv);
+            });
+        }
+
+        function playTTS(id, displayText, statusDiv) {
+            if (!('speechSynthesis' in window)) {
+                statusDiv.innerText = "Audio file missing & TTS not supported.";
+                isSpeaking = false;
+                return;
+            }
+
+            // Hook iOS media session with silent audio for TTS mode
+            silentAudio.play().catch(e => console.log(e));
+
             const text = prayers[id];
             const utterance = new SpeechSynthesisUtterance(text);
-
+            
             const voices = window.speechSynthesis.getVoices();
             const preferredVoice = voices.find(voice => voice.lang.includes('en-') && !voice.name.includes('Bad'));
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-            }
+            if (preferredVoice) utterance.voice = preferredVoice;
 
             utterance.rate = 0.9;
             utterance.pitch = 1.0;
-
-            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-
-            utterance.onstart = () => { 
-                isSpeaking = true;
-                statusDiv.innerText = `Playing: ${displayText}...`; 
-            };
 
             utterance.onend = () => { 
                 isSpeaking = false;
@@ -385,23 +398,30 @@
                     statusDiv.innerText = ""; 
                 }
             };
-
+            
             utterance.onerror = (e) => { 
                 isSpeaking = false;
                 console.error("Speech error", e);
             };
 
-            setTimeout(() => {
-                window.speechSynthesis.speak(utterance);
-            }, 50);
+            setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
         }
 
+        // Initialize TTS voices
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
             window.speechSynthesis.onvoiceschanged = function() {
                 window.speechSynthesis.getVoices();
             };
         }
+
+        // Keyboard bindings for clickers/headsets
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'MediaPlayPause' || e.code === 'MediaTrackNext' || e.code === 'Space') {
+                e.preventDefault();
+                playNext();
+            }
+        });
     </script>
 </body>
 </html>

@@ -182,7 +182,6 @@
     <div class="subtitle">1-9: Salutations | 0: Closing Prayers</div>
 
     <script>
-        // TTS Fallback Text
         const prayers = {
             'opening': "O God, come to my assistance. O Lord, make haste to help me. Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now and ever shall be, world without end. Amen.",
             1: "By the intercession of Saint Michael and the celestial Choir of Seraphim, may the Lord make us worthy to burn with the fire of perfect charity. Amen.",
@@ -206,7 +205,7 @@
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
 
-        // Silent audio for TTS fallback (to hook iOS media controls)
+        // Silent audio to hook iOS headset media controls
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -274,7 +273,6 @@
                     navigator.mediaSession.setActionHandler('nexttrack', handleHeadset);
                 }
 
-                // TTS Fallback trap: if OS pauses the silent audio via headset
                 silentAudio.addEventListener('pause', () => {
                     if (!isSpeaking) playNext();
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
@@ -307,7 +305,6 @@
 
         function resetState() {
             audioPlayer.pause();
-            audioPlayer.currentTime = 0;
             if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             
             currentPrayer = null;
@@ -338,14 +335,22 @@
 
         function speak(id) {
             const statusDiv = document.getElementById('status');
+            
+            // 1. Wake Lock & Media Controls
             initMediaSession();
             requestWakeLock();
+            silentAudio.play().catch(e => console.log(e));
 
-            // Stop any current audio
+            // 2. Synchronous TTS Unlock (CRITICAL FOR iOS FALLBACK)
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                // Speak a silent space to prove to iOS this was triggered by a real tap
+                let unlock = new SpeechSynthesisUtterance(' ');
+                window.speechSynthesis.speak(unlock);
+            }
+
+            // 3. Reset existing audio
             audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
             currentPrayer = id;
             updateButtonColors(id);
 
@@ -353,61 +358,59 @@
             statusDiv.innerText = `Playing: ${displayText}...`;
             isSpeaking = true;
 
-            // Attempt to load and play the MP3 file
+            // 4. Define the TTS Fallback function
+            let fallbackTriggered = false;
+            const triggerFallback = () => {
+                if (fallbackTriggered) return;
+                fallbackTriggered = true;
+                
+                statusDiv.innerText = `MP3 missing. Using device voice...`;
+                
+                if (!('speechSynthesis' in window)) return;
+
+                const text = prayers[id];
+                const utterance = new SpeechSynthesisUtterance(text);
+                const voices = window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(voice => voice.lang.includes('en-') && !voice.name.includes('Bad'));
+                if (preferredVoice) utterance.voice = preferredVoice;
+
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+
+                utterance.onend = () => { 
+                    isSpeaking = false;
+                    if (currentPrayer === id) { markAsPlayed(id); statusDiv.innerText = ""; }
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            };
+
+            // 5. Try playing the MP3
             audioPlayer.src = `audio/${id}.mp3`;
             
-            audioPlayer.play().then(() => {
-                // MP3 found and playing
-                audioPlayer.onended = () => {
-                    isSpeaking = false;
-                    if (currentPrayer === id) {
-                        markAsPlayed(id);
-                        statusDiv.innerText = "";
-                    }
-                };
-            }).catch((e) => {
-                // MP3 failed (e.g. 404 Not Found) - Fall back to TTS
-                playTTS(id, displayText, statusDiv);
-            });
-        }
-
-        function playTTS(id, displayText, statusDiv) {
-            if (!('speechSynthesis' in window)) {
-                statusDiv.innerText = "Audio file missing & TTS not supported.";
-                isSpeaking = false;
-                return;
+            // Catch HTTP 404 Error explicitly
+            audioPlayer.onerror = () => triggerFallback();
+            
+            // Catch Promise Rejection explicitly
+            let playPromise = audioPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Success! MP3 is playing.
+                    audioPlayer.onended = () => {
+                        isSpeaking = false;
+                        if (currentPrayer === id) {
+                            markAsPlayed(id);
+                            statusDiv.innerText = "";
+                        }
+                    };
+                }).catch((e) => {
+                    // Fail! No MP3 found.
+                    triggerFallback();
+                });
             }
-
-            // Hook iOS media session with silent audio for TTS mode
-            silentAudio.play().catch(e => console.log(e));
-
-            const text = prayers[id];
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            const voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(voice => voice.lang.includes('en-') && !voice.name.includes('Bad'));
-            if (preferredVoice) utterance.voice = preferredVoice;
-
-            utterance.rate = 0.9;
-            utterance.pitch = 1.0;
-
-            utterance.onend = () => { 
-                isSpeaking = false;
-                if (currentPrayer === id) {
-                    markAsPlayed(id);
-                    statusDiv.innerText = ""; 
-                }
-            };
-            
-            utterance.onerror = (e) => { 
-                isSpeaking = false;
-                console.error("Speech error", e);
-            };
-
-            setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
         }
 
-        // Initialize TTS voices
+        // Initialize voices on load
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
             window.speechSynthesis.onvoiceschanged = function() {
@@ -415,7 +418,7 @@
             };
         }
 
-        // Keyboard bindings for clickers/headsets
+        // Spacebar / Headset button mappings
         document.addEventListener('keydown', (e) => {
             if (e.code === 'MediaPlayPause' || e.code === 'MediaTrackNext' || e.code === 'Space') {
                 e.preventDefault();

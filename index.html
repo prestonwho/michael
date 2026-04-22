@@ -334,8 +334,9 @@
                     navigator.mediaSession.setActionHandler('nexttrack', handleHeadset);
                 }
 
+                // Just quietly resume the silent audio if iOS pauses it (e.g. taking out an AirPod) 
+                // to maintain our media control lock, but DO NOT trigger the actual prayer audio.
                 silentAudio.addEventListener('pause', () => {
-                    if (!isPlaying) playNext();
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
                 });
 

@@ -386,7 +386,7 @@
             };
 
             // 5. Try playing the MP3
-            audioPlayer.src = `audio/${id}.mp3`;
+            audioPlayer.src = `${id}.mp3`;
             
             // Catch HTTP 404 Error explicitly
             audioPlayer.onerror = () => triggerFallback();

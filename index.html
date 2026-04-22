@@ -148,16 +148,26 @@
             border-radius: 20px;
             width: 80px;
             padding: 10px 0;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #333;
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             -webkit-tap-highlight-color: transparent;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
         .nav-btn:active {
             transform: scale(0.95);
             background-color: #e2e6ea;
+        }
+        .nav-btn.active-repeat {
+            background-color: #007aff !important;
+            color: white !important;
+            border-color: #0056b3 !important;
         }
 
         .subtitle {
@@ -226,10 +236,12 @@
                 <button id="btn-8" class="btn" onclick="playAudio(8)">8</button>
                 <button id="btn-9" class="btn" onclick="playAudio(9)">9</button>
                 
-                <div class="prev-container"></div>
+                <div class="prev-container">
+                    <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
+                </div>
                 <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
                 <div class="next-container">
-                    <button class="nav-btn" onclick="playNext()">Play Next</button>
+                    <button class="nav-btn" onclick="playNext()">Play<br>Next</button>
                 </div>
             </div>
         </div>
@@ -246,6 +258,7 @@
 
         let currentPrayer = null;
         let isPlaying = false;
+        let isRepeatOn = false;
         let mediaSessionInitialized = false;
         let wakeLock = null; 
         
@@ -351,6 +364,20 @@
             }
         }
 
+        function toggleRepeat() {
+            isRepeatOn = !isRepeatOn;
+            audioPlayer.loop = isRepeatOn; // Update current player loop state
+            
+            const btn = document.getElementById('btn-repeat');
+            if (isRepeatOn) {
+                btn.innerHTML = "Repeat<br>On";
+                btn.classList.add('active-repeat');
+            } else {
+                btn.innerHTML = "Repeat<br>Off";
+                btn.classList.remove('active-repeat');
+            }
+        }
+
         function resetState() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
@@ -398,8 +425,9 @@
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
 
-            // Play the MP3
+            // Play the MP3 from the root folder
             audioPlayer.src = `${id}.mp3`;
+            audioPlayer.loop = isRepeatOn; // Enforce loop setting
             
             audioPlayer.onerror = () => {
                 statusDiv.innerText = "Error: MP3 file not found.";
@@ -410,6 +438,7 @@
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     audioPlayer.onended = () => {
+                        // This only triggers when loop is false
                         isPlaying = false;
                         if (currentPrayer === id) {
                             markAsPlayed(id);

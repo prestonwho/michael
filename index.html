@@ -154,24 +154,24 @@
     <h1>St. Michael Chaplet</h1>
     
     <div class="header-buttons">
-        <button id="btn-opening" class="action-btn" onclick="speak('opening')">Opening Prayer</button>
+        <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
         <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;">Reset</button>
     </div>
 
     <div class="keypad-container">
         <div class="keypad">
-            <button id="btn-1" class="btn" onclick="speak(1)">1</button>
-            <button id="btn-2" class="btn" onclick="speak(2)">2</button>
-            <button id="btn-3" class="btn" onclick="speak(3)">3</button>
-            <button id="btn-4" class="btn" onclick="speak(4)">4</button>
-            <button id="btn-5" class="btn" onclick="speak(5)">5</button>
-            <button id="btn-6" class="btn" onclick="speak(6)">6</button>
-            <button id="btn-7" class="btn" onclick="speak(7)">7</button>
-            <button id="btn-8" class="btn" onclick="speak(8)">8</button>
-            <button id="btn-9" class="btn" onclick="speak(9)">9</button>
+            <button id="btn-1" class="btn" onclick="playAudio(1)">1</button>
+            <button id="btn-2" class="btn" onclick="playAudio(2)">2</button>
+            <button id="btn-3" class="btn" onclick="playAudio(3)">3</button>
+            <button id="btn-4" class="btn" onclick="playAudio(4)">4</button>
+            <button id="btn-5" class="btn" onclick="playAudio(5)">5</button>
+            <button id="btn-6" class="btn" onclick="playAudio(6)">6</button>
+            <button id="btn-7" class="btn" onclick="playAudio(7)">7</button>
+            <button id="btn-8" class="btn" onclick="playAudio(8)">8</button>
+            <button id="btn-9" class="btn" onclick="playAudio(9)">9</button>
             
             <div class="prev-container"></div>
-            <button id="btn-0" class="btn btn-zero" onclick="speak(0)">0</button>
+            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
             <div class="next-container">
                 <button class="nav-btn" onclick="playNext()">Play Next</button>
             </div>
@@ -182,22 +182,8 @@
     <div class="subtitle">1-9: Salutations | 0: Closing Prayers</div>
 
     <script>
-        const prayers = {
-            'opening': "O God, come to my assistance. O Lord, make haste to help me. Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now and ever shall be, world without end. Amen.",
-            1: "By the intercession of Saint Michael and the celestial Choir of Seraphim, may the Lord make us worthy to burn with the fire of perfect charity. Amen.",
-            2: "By the intercession of Saint Michael and the celestial Choir of Cherubim, may the Lord grant us the grace to leave the ways of sin and run in the paths of Christian perfection. Amen.",
-            3: "By the intercession of Saint Michael and the celestial Choir of Thrones, may the Lord infuse into our hearts a true and sincere spirit of humility. Amen.",
-            4: "By the intercession of Saint Michael and the celestial Choir of Dominations, may the Lord give us grace to govern our senses and overcome any unruly passions. Amen.",
-            5: "By the intercession of Saint Michael and the celestial Choir of Virtues, may the Lord preserve us from evil and falling into temptation. Amen.",
-            6: "By the intercession of Saint Michael and the celestial Choir of Powers, may the Lord protect our souls against the snares and temptations of the devil. Amen.",
-            7: "By the intercession of Saint Michael and the celestial Choir of Principalities, may the Lord fill our souls with the spirit of true and sincere obedience. Amen.",
-            8: "By the intercession of Saint Michael and the celestial Choir of Archangels, may the Lord give us perseverance in faith and in all good works in order that we may attain the glory of Heaven. Amen.",
-            9: "By the intercession of Saint Michael and the celestial Choir of Angels, may the Lord grant us to be protected by them in this mortal life and conducted hereafter to eternal glory. Amen.",
-            0: "O glorious prince Saint Michael, chief and commander of the heavenly hosts, guardian of souls, vanquisher of rebel spirits, servant in the house of the Divine King and our admirable conductor, you who shine with excellence and superhuman virtue, deliver us from all evil, who turn to you with confidence and enable us by your gracious protection to serve God more and more faithfully every day. Pray for us, O glorious Saint Michael, Prince of the Church of Jesus Christ, that we may be made worthy of His promises. Almighty and Everlasting God, Who, by a prodigy of goodness and a merciful desire for the salvation of all men, has appointed the most glorious Archangel Saint Michael Prince of Your Church, make us worthy, we ask You, to be delivered from all our enemies, that none of them may harass us at the hour of death, but that we may be conducted by him into Your Presence. This we ask through the merits of Jesus Christ Our Lord. Amen."
-        };
-
         let currentPrayer = null;
-        let isSpeaking = false;
+        let isPlaying = false;
         let mediaSessionInitialized = false;
         let wakeLock = null; 
         
@@ -274,7 +260,7 @@
                 }
 
                 silentAudio.addEventListener('pause', () => {
-                    if (!isSpeaking) playNext();
+                    if (!isPlaying) playNext();
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
                 });
 
@@ -305,10 +291,10 @@
 
         function resetState() {
             audioPlayer.pause();
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            audioPlayer.currentTime = 0;
             
             currentPrayer = null;
-            isSpeaking = false;
+            isPlaying = false;
             releaseWakeLock(); 
             
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
@@ -323,99 +309,56 @@
 
         function playNext() {
             if (currentPrayer === null) {
-                speak('opening');
+                playAudio('opening');
             } else if (currentPrayer === 'opening') {
-                speak(1);
+                playAudio(1);
             } else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) {
-                speak(currentPrayer + 1);
+                playAudio(currentPrayer + 1);
             } else if (currentPrayer === 9) {
-                speak(0);
+                playAudio(0);
             }
         }
 
-        function speak(id) {
+        function playAudio(id) {
             const statusDiv = document.getElementById('status');
             
-            // 1. Wake Lock & Media Controls
+            // Wake Lock & Media Controls
             initMediaSession();
             requestWakeLock();
             silentAudio.play().catch(e => console.log(e));
 
-            // 2. Synchronous TTS Unlock (CRITICAL FOR iOS FALLBACK)
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                // Speak a silent space to prove to iOS this was triggered by a real tap
-                let unlock = new SpeechSynthesisUtterance(' ');
-                window.speechSynthesis.speak(unlock);
-            }
-
-            // 3. Reset existing audio
+            // Reset existing audio
             audioPlayer.pause();
             currentPrayer = id;
             updateButtonColors(id);
 
             let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
-            isSpeaking = true;
+            isPlaying = true;
 
-            // 4. Define the TTS Fallback function
-            let fallbackTriggered = false;
-            const triggerFallback = () => {
-                if (fallbackTriggered) return;
-                fallbackTriggered = true;
-                
-                statusDiv.innerText = `MP3 missing. Using device voice...`;
-                
-                if (!('speechSynthesis' in window)) return;
-
-                const text = prayers[id];
-                const utterance = new SpeechSynthesisUtterance(text);
-                const voices = window.speechSynthesis.getVoices();
-                const preferredVoice = voices.find(voice => voice.lang.includes('en-') && !voice.name.includes('Bad'));
-                if (preferredVoice) utterance.voice = preferredVoice;
-
-                utterance.rate = 0.9;
-                utterance.pitch = 1.0;
-
-                utterance.onend = () => { 
-                    isSpeaking = false;
-                    if (currentPrayer === id) { markAsPlayed(id); statusDiv.innerText = ""; }
-                };
-                
-                window.speechSynthesis.speak(utterance);
-            };
-
-            // 5. Try playing the MP3
+            // Play the MP3
             audioPlayer.src = `${id}.mp3`;
             
-            // Catch HTTP 404 Error explicitly
-            audioPlayer.onerror = () => triggerFallback();
+            audioPlayer.onerror = () => {
+                statusDiv.innerText = "Error: MP3 file not found.";
+                isPlaying = false;
+            };
             
-            // Catch Promise Rejection explicitly
             let playPromise = audioPlayer.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
-                    // Success! MP3 is playing.
                     audioPlayer.onended = () => {
-                        isSpeaking = false;
+                        isPlaying = false;
                         if (currentPrayer === id) {
                             markAsPlayed(id);
                             statusDiv.innerText = "";
                         }
                     };
                 }).catch((e) => {
-                    // Fail! No MP3 found.
-                    triggerFallback();
+                    statusDiv.innerText = "Error playing audio.";
+                    isPlaying = false;
                 });
             }
-        }
-
-        // Initialize voices on load
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-            window.speechSynthesis.onvoiceschanged = function() {
-                window.speechSynthesis.getVoices();
-            };
         }
 
         // Spacebar / Headset button mappings

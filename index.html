@@ -399,7 +399,7 @@
             isPlaying = true;
 
             // Play the MP3
-            audioPlayer.src = `audio/${id}.mp3`;
+            audioPlayer.src = `${id}.mp3`;
             
             audioPlayer.onerror = () => {
                 statusDiv.innerText = "Error: MP3 file not found.";

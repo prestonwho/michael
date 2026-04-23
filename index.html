@@ -44,7 +44,6 @@
             text-align: center;
         }
         
-        /* Disabled state for loading */
         button:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -262,6 +261,7 @@
         let isRepeatOn = false;
         let mediaSessionInitialized = false;
         let isUnlocked = false;
+        let isFirstPlay = true;
         let wakeLock = null; 
         let repeatTimeout = null;
         
@@ -269,7 +269,6 @@
         const players = {};
         let loadedCount = 0;
         
-        // Load files securely into memory blobs on startup
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
@@ -312,7 +311,6 @@
                 statusDiv.innerText = "Ready.";
                 setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
                 
-                // Unlock the UI
                 document.querySelectorAll('button').forEach(btn => {
                     btn.disabled = false;
                     if (btn.dataset.text) btn.innerText = btn.dataset.text;
@@ -352,6 +350,16 @@
 
         silentAudio.src = createSilentAudioURL();
 
+        // Get a head start on waking up Bluetooth if the user touches anywhere on the screen
+        document.addEventListener('touchstart', function handleFirstTouch() {
+            if (!isUnlocked) {
+                isUnlocked = true;
+                silentAudio.play().catch(e => console.log(e));
+                prayerIds.forEach(pId => players[pId].load());
+            }
+            document.removeEventListener('touchstart', handleFirstTouch);
+        }, { passive: true });
+
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
             try {
@@ -374,10 +382,8 @@
             }
         });
 
-        // The master toggle function for all headset/keyboard interactions
         function togglePlayPause() {
             if (isPlaying) {
-                // Currently playing -> Pause it
                 if (currentPrayer !== null && players[currentPrayer]) {
                     players[currentPrayer].pause();
                 }
@@ -386,7 +392,6 @@
                 document.getElementById('status').innerText = "Paused";
                 if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
-                // Currently paused -> Resume or start next
                 if (currentPrayer !== null && players[currentPrayer] && players[currentPrayer].paused && !players[currentPrayer].ended) {
                     players[currentPrayer].play().catch(e=>console.log(e));
                     isPlaying = true;
@@ -407,7 +412,6 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
-                    // Wire BOTH play and pause to the smart toggle to fix the double-click bug
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
@@ -494,15 +498,35 @@
             
             initMediaSession();
             requestWakeLock();
-            silentAudio.play().catch(e => console.log(e));
 
-            // Silently unlock all audio engines on first screen tap
-            if (!isUnlocked) {
-                isUnlocked = true;
-                prayerIds.forEach(pId => {
-                    if (pId !== id) players[pId].load();
-                });
+            if (isFirstPlay) {
+                isFirstPlay = false;
+                
+                // 1. Instantly fire the silent audio to wake up the Bluetooth radio
+                silentAudio.play().catch(e => console.log(e));
+                
+                // 2. Silently unlock all other players in the background if they weren't already
+                if (!isUnlocked) {
+                    isUnlocked = true;
+                    prayerIds.forEach(pId => {
+                        if (pId !== id) players[pId].load();
+                    });
+                }
+
+                statusDiv.innerText = "Waking up audio...";
+                
+                // 3. Wait 500ms for Bluetooth to stabilize before pushing actual MP3
+                setTimeout(() => {
+                    startPlayback(id);
+                }, 500);
+            } else {
+                silentAudio.play().catch(e => console.log(e));
+                startPlayback(id);
             }
+        }
+
+        function startPlayback(id) {
+            const statusDiv = document.getElementById('status');
 
             if (currentPrayer !== null && players[currentPrayer]) {
                 players[currentPrayer].pause();

@@ -7,6 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <title>St. Michael Chaplet</title>
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <style>
         * {
             -webkit-user-select: none;
@@ -187,35 +189,38 @@
             font-size: 14px;
         }
 
-        #landscape-warning {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background-color: #f0f0f5;
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            padding: 40px;
-            box-sizing: border-box;
-        }
-
+        /* Landscape Layout */
         @media screen and (orientation: landscape) {
-            .app-container { display: none; }
-            #landscape-warning { display: flex; }
+            .app-container {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-template-rows: 1fr auto auto 1fr;
+                grid-template-areas: 
+                    "title keypad"
+                    "headers keypad"
+                    "status keypad"
+                    "subtitle keypad";
+                align-items: center;
+                column-gap: 40px;
+                padding: 15px 40px;
+            }
+            h1 { grid-area: title; margin: 0 0 10px 0; text-align: left; align-self: end; }
+            .header-buttons { grid-area: headers; margin: 0 0 15px 0; justify-content: flex-start; gap: 15px; }
+            .keypad-container { grid-area: keypad; }
+            #status { grid-area: status; margin: 0 0 10px 0; text-align: left; height: auto; align-self: start; }
+            .subtitle { grid-area: subtitle; margin: 0; text-align: left; align-self: start; }
+            
+            /* Shrink keypad for standard landscape phones so it doesn't clip */
+            @media (max-height: 500px) {
+                .btn { width: 60px; height: 60px; font-size: 24px; }
+                .keypad { gap: 10px; margin-bottom: 0; }
+                .nav-btn { width: 60px; font-size: 11px; padding: 8px 0; }
+                h1 { font-size: 22px; }
+            }
         }
     </style>
 </head>
 <body>
-
-    <div id="landscape-warning">
-        Please rotate your device back to portrait mode to use the keypad.
-    </div>
 
     <div class="app-container">
         <h1>St. Michael Chaplet</h1>
@@ -530,7 +535,6 @@
             if (currentPrayer !== null && players[currentPrayer]) {
                 players[currentPrayer].pause();
                 
-                // If skipping and the previous prayer finished at least once, mark it played
                 if (hasCompletedOnce && currentPrayer !== id) {
                     markAsPlayed(currentPrayer);
                 }

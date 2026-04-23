@@ -38,6 +38,8 @@
             width: 100%;
             padding: 20px;
             box-sizing: border-box;
+            /* Safe area padding to respect iPhone notch and Dynamic Island */
+            padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
         }
 
         h1 {
@@ -100,7 +102,6 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             width: 100%;
-            margin-bottom: 15px;
         }
         .btn {
             background-color: #fff;
@@ -133,18 +134,29 @@
             color: #8e8e93;
             border-color: #d1d1d6;
         }
-        .btn-zero {
-            grid-column: 2;
-        }
         
-        .nav-buttons {
+        #status {
+            margin-top: 15px;
+            margin-bottom: 10px;
+            height: 20px;
+            color: #d9534f;
+            font-weight: bold;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .bottom-nav {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             width: 100%;
+            max-width: 300px;
+            align-items: center;
+            justify-items: center;
+            margin-bottom: 15px;
         }
-        .prev-container { grid-column: 1; display: flex; justify-content: center; }
-        .next-container { grid-column: 3; display: flex; justify-content: center; }
+        .prev-container { justify-self: start; }
+        .next-container { justify-self: end; }
         
         .nav-btn {
             background-color: #f8f9fa;
@@ -177,45 +189,56 @@
         .subtitle {
             font-size: 14px;
             color: #666;
-            margin-top: 25px;
             text-align: center;
-        }
-        #status {
-            margin-top: 15px;
-            height: 20px;
-            color: #d9534f;
-            font-weight: bold;
-            text-align: center;
-            font-size: 14px;
         }
 
-        /* Landscape Layout */
+        /* Landscape Orientation - Split View */
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
-                grid-template-columns: 1fr auto;
-                grid-template-rows: 1fr auto auto 1fr;
+                grid-template-columns: auto auto;
+                grid-template-rows: auto auto auto auto auto;
                 grid-template-areas: 
-                    "title keypad"
-                    "headers keypad"
-                    "status keypad"
+                    "title    keypad"
+                    "headers  keypad"
+                    "status   keypad"
+                    "botnav   keypad"
                     "subtitle keypad";
-                align-items: center;
-                column-gap: 40px;
-                padding: 15px 40px;
+                justify-content: center;
+                align-content: center;
+                column-gap: 60px; /* Brings columns closer to center, avoiding screen edges */
+                row-gap: 10px;
             }
-            h1 { grid-area: title; margin: 0 0 10px 0; text-align: left; align-self: end; }
-            .header-buttons { grid-area: headers; margin: 0 0 15px 0; justify-content: flex-start; gap: 15px; }
-            .keypad-container { grid-area: keypad; }
-            #status { grid-area: status; margin: 0 0 10px 0; text-align: left; height: auto; align-self: start; }
-            .subtitle { grid-area: subtitle; margin: 0; text-align: left; align-self: start; }
             
-            /* Shrink keypad for standard landscape phones so it doesn't clip */
-            @media (max-height: 500px) {
-                .btn { width: 60px; height: 60px; font-size: 24px; }
-                .keypad { gap: 10px; margin-bottom: 0; }
-                .nav-btn { width: 60px; font-size: 11px; padding: 8px 0; }
-                h1 { font-size: 22px; }
+            h1 { grid-area: title; margin: 0; text-align: left; }
+            .header-buttons { grid-area: headers; margin: 0; justify-content: flex-start; gap: 15px; }
+            #status { grid-area: status; margin: 0; text-align: left; }
+            .subtitle { grid-area: subtitle; margin: 0; text-align: left; }
+            .keypad-container { grid-area: keypad; }
+            
+            .bottom-nav { 
+                grid-area: botnav; 
+                display: flex; 
+                flex-direction: row; 
+                justify-content: flex-start;
+                gap: 15px;
+                margin: 0; 
+                max-width: none;
+            }
+            
+            /* Make keypad 1-9 much bigger now that they have their own column */
+            .btn { width: 85px; height: 85px; font-size: 36px; }
+            .keypad { gap: 15px; }
+            
+            /* Adjust the bottom 3 buttons so they fit cleanly under the status text */
+            .btn-zero { width: 60px; height: 60px; font-size: 26px; }
+            .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
+
+            /* For smaller iPhone landscape views (like iPhone SE) */
+            @media (max-height: 400px) {
+                .btn { width: 75px; height: 75px; font-size: 32px; }
+                .keypad { gap: 10px; }
+                column-gap: 40px;
             }
         }
     </style>
@@ -241,18 +264,21 @@
                 <button id="btn-7" class="btn" onclick="playAudio(7)" disabled data-text="7"></button>
                 <button id="btn-8" class="btn" onclick="playAudio(8)" disabled data-text="8"></button>
                 <button id="btn-9" class="btn" onclick="playAudio(9)" disabled data-text="9"></button>
-                
-                <div class="prev-container">
-                    <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()" disabled>Repeat<br>Off</button>
-                </div>
-                <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled data-text="0"></button>
-                <div class="next-container">
-                    <button id="btn-next" class="nav-btn" onclick="playNext()" disabled>Play<br>Next</button>
-                </div>
             </div>
         </div>
         
         <div id="status"></div>
+
+        <div class="bottom-nav">
+            <div class="prev-container">
+                <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()" disabled>Repeat<br>Off</button>
+            </div>
+            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled data-text="0"></button>
+            <div class="next-container">
+                <button id="btn-next" class="nav-btn" onclick="playNext()" disabled>Play<br>Next</button>
+            </div>
+        </div>
+        
         <div class="subtitle">1-9: Salutations | 0: Closing Prayers</div>
     </div>
 

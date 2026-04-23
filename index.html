@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
-    <!-- Sets the default name when adding to iOS Home Screen -->
     <meta name="apple-mobile-web-app-title" content="St. Michael">
     
     <title>St. Michael Chaplet</title>
@@ -229,7 +227,7 @@
             .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
-            /* Make keypad 1-9 much bigger now that they have their own column */
+            /* Make keypad 1-9 much bigger */
             .btn { width: 85px; height: 85px; font-size: 36px; }
             .keypad { gap: 15px; }
             
@@ -237,7 +235,6 @@
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
             .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
-            /* For smaller iPhone landscape views (like iPhone SE) */
             @media (max-height: 400px) {
                 .btn { width: 75px; height: 75px; font-size: 32px; }
                 .keypad { gap: 10px; }
@@ -293,80 +290,89 @@
         let isPlaying = false;
         let isRepeatOn = false;
         let mediaSessionInitialized = false;
-        let isUnlocked = false;
         let isFirstPlay = true;
         let hasCompletedOnce = false;
         let wakeLock = null; 
         let repeatTimeout = null;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        const players = {};
+        
+        // This stores the raw MP3 data directly in memory as Base64 strings
+        const audioData = {};
         let loadedCount = 0;
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
 
-            prayerIds.forEach(id => {
-                fetch(`${id}.mp3`)
+            Promise.all(prayerIds.map(id => {
+                return fetch(`${id}.mp3`)
                     .then(res => {
                         if (!res.ok) throw new Error("Not found");
                         return res.blob();
                     })
                     .then(blob => {
-                        let a = new Audio(URL.createObjectURL(blob));
-                        a.playsInline = true;
-                        
-                        a.addEventListener('ended', () => {
-                            hasCompletedOnce = true;
-                            
-                            if (isRepeatOn) {
-                                repeatTimeout = setTimeout(() => {
-                                    a.currentTime = 0;
-                                    a.play().catch(e => console.log(e));
-                                }, 500); 
-                            } else {
-                                isPlaying = false;
-                                if (currentPrayer === id) {
-                                    markAsPlayed(id);
-                                    document.getElementById('status').innerText = "";
-                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
-                                    
-                                    if (id === 0) {
-                                        setTimeout(resetState, 1000);
-                                    }
+                        return new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                // Save the exact file data as pure text in memory
+                                audioData[id] = reader.result;
+                                
+                                const btn = document.getElementById(`btn-${id}`);
+                                if (btn) {
+                                    btn.disabled = false;
+                                    if (btn.dataset.text) btn.innerText = btn.dataset.text;
                                 }
-                            }
+                                
+                                loadedCount++;
+                                if (loadedCount === prayerIds.length) {
+                                    statusDiv.innerText = "Ready.";
+                                    setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
+                                    
+                                    document.getElementById('btn-reset').disabled = false;
+                                    document.getElementById('btn-repeat').disabled = false;
+                                    document.getElementById('btn-next').disabled = false;
+                                } else {
+                                    statusDiv.innerText = `Loading audio... ${loadedCount}/${prayerIds.length}`;
+                                }
+                                resolve();
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(blob);
                         });
-                        
-                        players[id] = a;
-                        
-                        // Instantly activate this specific button
-                        const btn = document.getElementById(`btn-${id}`);
-                        if (btn) {
-                            btn.disabled = false;
-                            if (btn.dataset.text) btn.innerText = btn.dataset.text;
-                        }
-                        
-                        loadedCount++;
-                        if (loadedCount === prayerIds.length) {
-                            statusDiv.innerText = "Ready.";
-                            setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
-                            
-                            // Activate global controls
-                            document.getElementById('btn-reset').disabled = false;
-                            document.getElementById('btn-repeat').disabled = false;
-                            document.getElementById('btn-next').disabled = false;
-                        } else {
-                            statusDiv.innerText = `Loading audio... ${loadedCount}/${prayerIds.length}`;
-                        }
-                    })
-                    .catch(e => {
-                        statusDiv.innerText = "Error loading audio files. Please refresh.";
                     });
+            })).catch(e => {
+                document.getElementById('status').innerText = "Error loading audio files. Please refresh.";
             });
         });
 
+        // The single master audio player
+        const audioPlayer = new Audio();
+        audioPlayer.playsInline = true;
+        
+        audioPlayer.addEventListener('ended', () => {
+            hasCompletedOnce = true;
+            
+            if (isRepeatOn) {
+                repeatTimeout = setTimeout(() => {
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play().catch(e => console.log(e));
+                }, 500); 
+            } else {
+                isPlaying = false;
+                if (currentPrayer !== null) {
+                    markAsPlayed(currentPrayer);
+                    document.getElementById('status').innerText = "";
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                    
+                    if (currentPrayer === 0) {
+                        setTimeout(resetState, 1000);
+                    }
+                }
+            }
+        });
+
+        // Background media lock handler
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -376,7 +382,6 @@
             const numSamples = sampleRate * 5; 
             const buffer = new ArrayBuffer(44 + numSamples * 2);
             const view = new DataView(buffer);
-            
             view.setUint32(0, 0x52494646, false);
             view.setUint32(4, 36 + numSamples * 2, true);
             view.setUint32(8, 0x57415645, false);
@@ -390,22 +395,10 @@
             view.setUint16(34, 16, true);
             view.setUint32(36, 0x64617461, false);
             view.setUint32(40, numSamples * 2, true);
-            
             return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
         }
 
         silentAudio.src = createSilentAudioURL();
-
-        document.addEventListener('touchstart', function handleFirstTouch() {
-            if (!isUnlocked) {
-                isUnlocked = true;
-                silentAudio.play().catch(e => console.log(e));
-                prayerIds.forEach(pId => {
-                    if (players[pId]) players[pId].load();
-                });
-            }
-            document.removeEventListener('touchstart', handleFirstTouch);
-        }, { passive: true });
 
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
@@ -431,16 +424,14 @@
 
         function togglePlayPause() {
             if (isPlaying) {
-                if (currentPrayer !== null && players[currentPrayer]) {
-                    players[currentPrayer].pause();
-                }
+                audioPlayer.pause();
                 isPlaying = false;
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
                 if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
-                if (currentPrayer !== null && players[currentPrayer] && players[currentPrayer].paused && !players[currentPrayer].ended) {
-                    players[currentPrayer].play().catch(e=>console.log(e));
+                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                    audioPlayer.play().catch(e=>console.log(e));
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
                     document.getElementById('status').innerText = `Playing: ${displayText}...`;
@@ -459,6 +450,7 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
+                    // Completely synchronous background execution
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
@@ -506,10 +498,8 @@
         }
 
         function resetState() {
-            if (currentPrayer !== null && players[currentPrayer]) {
-                players[currentPrayer].pause();
-                players[currentPrayer].currentTime = 0;
-            }
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
             
@@ -542,30 +532,22 @@
         }
 
         function playAudio(id) {
-            const statusDiv = document.getElementById('status');
-            
             initMediaSession();
             requestWakeLock();
 
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
+                // Wake up bluetooth
                 silentAudio.play().catch(e => console.log(e));
                 
-                if (!isUnlocked) {
-                    isUnlocked = true;
-                    prayerIds.forEach(pId => {
-                        if (pId !== id && players[pId]) players[pId].load();
-                    });
-                }
-
-                statusDiv.innerText = "Waking up audio...";
+                document.getElementById('status').innerText = "Waking up audio...";
                 
                 setTimeout(() => {
                     startPlayback(id);
                 }, 500);
             } else {
-                silentAudio.play().catch(e => console.log(e));
+                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
                 startPlayback(id);
             }
         }
@@ -573,12 +555,10 @@
         function startPlayback(id) {
             const statusDiv = document.getElementById('status');
 
-            if (currentPrayer !== null && players[currentPrayer]) {
-                players[currentPrayer].pause();
-                
-                if (hasCompletedOnce && currentPrayer !== id) {
-                    markAsPlayed(currentPrayer);
-                }
+            audioPlayer.pause();
+            
+            if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
+                markAsPlayed(currentPrayer);
             }
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
@@ -591,10 +571,11 @@
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
-            let p = players[id];
-            p.currentTime = 0;
+            // Inject the raw base64 data into the active player
+            audioPlayer.src = audioData[id];
+            audioPlayer.currentTime = 0;
             
-            let playPromise = p.play();
+            let playPromise = audioPlayer.play();
             if (playPromise !== undefined) {
                 playPromise.catch((e) => {
                     statusDiv.innerText = "Error: Audio playback failed.";

@@ -43,6 +43,14 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        
+        /* Disabled state for loading */
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .header-buttons {
             display: flex;
             justify-content: space-between;
@@ -63,7 +71,7 @@
             -webkit-tap-highlight-color: transparent;
             transition: all 0.2s;
         }
-        .action-btn:active {
+        .action-btn:active:not(:disabled) {
             transform: scale(0.95);
             background-color: #e5e5ea;
         }
@@ -110,7 +118,7 @@
             -webkit-tap-highlight-color: transparent;
             transition: all 0.2s;
         }
-        .btn:active {
+        .btn:active:not(:disabled) {
             transform: scale(0.95);
             background-color: #e5e5ea;
         }
@@ -155,7 +163,7 @@
             justify-content: center;
             text-align: center;
         }
-        .nav-btn:active {
+        .nav-btn:active:not(:disabled) {
             transform: scale(0.95);
             background-color: #e2e6ea;
         }
@@ -214,28 +222,28 @@
         <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
-            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;">Reset</button>
+            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
+            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;" disabled>Reset</button>
         </div>
 
         <div class="keypad-container">
             <div class="keypad">
-                <button id="btn-1" class="btn" onclick="playAudio(1)">1</button>
-                <button id="btn-2" class="btn" onclick="playAudio(2)">2</button>
-                <button id="btn-3" class="btn" onclick="playAudio(3)">3</button>
-                <button id="btn-4" class="btn" onclick="playAudio(4)">4</button>
-                <button id="btn-5" class="btn" onclick="playAudio(5)">5</button>
-                <button id="btn-6" class="btn" onclick="playAudio(6)">6</button>
-                <button id="btn-7" class="btn" onclick="playAudio(7)">7</button>
-                <button id="btn-8" class="btn" onclick="playAudio(8)">8</button>
-                <button id="btn-9" class="btn" onclick="playAudio(9)">9</button>
+                <button id="btn-1" class="btn" onclick="playAudio(1)" disabled data-text="1"></button>
+                <button id="btn-2" class="btn" onclick="playAudio(2)" disabled data-text="2"></button>
+                <button id="btn-3" class="btn" onclick="playAudio(3)" disabled data-text="3"></button>
+                <button id="btn-4" class="btn" onclick="playAudio(4)" disabled data-text="4"></button>
+                <button id="btn-5" class="btn" onclick="playAudio(5)" disabled data-text="5"></button>
+                <button id="btn-6" class="btn" onclick="playAudio(6)" disabled data-text="6"></button>
+                <button id="btn-7" class="btn" onclick="playAudio(7)" disabled data-text="7"></button>
+                <button id="btn-8" class="btn" onclick="playAudio(8)" disabled data-text="8"></button>
+                <button id="btn-9" class="btn" onclick="playAudio(9)" disabled data-text="9"></button>
                 
                 <div class="prev-container">
-                    <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
+                    <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()" disabled>Repeat<br>Off</button>
                 </div>
-                <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
+                <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled data-text="0"></button>
                 <div class="next-container">
-                    <button class="nav-btn" onclick="playNext()">Play<br>Next</button>
+                    <button id="btn-next" class="nav-btn" onclick="playNext()" disabled>Play<br>Next</button>
                 </div>
             </div>
         </div>
@@ -259,33 +267,59 @@
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
         const players = {};
+        let loadedCount = 0;
         
-        // Create 11 dedicated audio players immediately on load
-        prayerIds.forEach(id => {
-            let a = new Audio(`${id}.mp3`);
-            a.playsInline = true;
-            a.preload = "auto";
-            
-            a.addEventListener('ended', () => {
-                if (isRepeatOn) {
-                    repeatTimeout = setTimeout(() => {
-                        a.currentTime = 0;
-                        a.play().catch(e => console.log(e));
-                    }, 500); 
-                } else {
-                    isPlaying = false;
-                    if (currentPrayer === id) {
-                        markAsPlayed(id);
-                        document.getElementById('status').innerText = "";
+        // Load files securely into memory blobs on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
+
+            Promise.all(prayerIds.map(id => {
+                return fetch(`${id}.mp3`)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Not found");
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        let a = new Audio(URL.createObjectURL(blob));
+                        a.playsInline = true;
                         
-                        if (id === 0) {
-                            setTimeout(resetState, 1000);
-                        }
-                    }
-                }
+                        a.addEventListener('ended', () => {
+                            if (isRepeatOn) {
+                                repeatTimeout = setTimeout(() => {
+                                    a.currentTime = 0;
+                                    a.play().catch(e => console.log(e));
+                                }, 500); 
+                            } else {
+                                isPlaying = false;
+                                if (currentPrayer === id) {
+                                    markAsPlayed(id);
+                                    document.getElementById('status').innerText = "";
+                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                                    
+                                    if (id === 0) {
+                                        setTimeout(resetState, 1000);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        players[id] = a;
+                        loadedCount++;
+                        statusDiv.innerText = `Loading audio... ${loadedCount}/${prayerIds.length}`;
+                    });
+            })).then(() => {
+                statusDiv.innerText = "Ready.";
+                setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
+                
+                // Unlock the UI
+                document.querySelectorAll('button').forEach(btn => {
+                    btn.disabled = false;
+                    if (btn.dataset.text) btn.innerText = btn.dataset.text;
+                });
+            }).catch(e => {
+                statusDiv.innerText = "Error loading audio files. Please refresh.";
             });
-            
-            players[id] = a;
         });
 
         // Silent audio to hook iOS headset media controls continuously
@@ -340,6 +374,31 @@
             }
         });
 
+        // The master toggle function for all headset/keyboard interactions
+        function togglePlayPause() {
+            if (isPlaying) {
+                // Currently playing -> Pause it
+                if (currentPrayer !== null && players[currentPrayer]) {
+                    players[currentPrayer].pause();
+                }
+                isPlaying = false;
+                clearTimeout(repeatTimeout);
+                document.getElementById('status').innerText = "Paused";
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+            } else {
+                // Currently paused -> Resume or start next
+                if (currentPrayer !== null && players[currentPrayer] && players[currentPrayer].paused && !players[currentPrayer].ended) {
+                    players[currentPrayer].play().catch(e=>console.log(e));
+                    isPlaying = true;
+                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                    document.getElementById('status').innerText = `Playing: ${displayText}...`;
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+                } else {
+                    playNext();
+                }
+            }
+        }
+
         function initMediaSession() {
             if (!mediaSessionInitialized) {
                 if ('mediaSession' in navigator) {
@@ -348,33 +407,13 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
-                    navigator.mediaSession.setActionHandler('play', () => {
-                        if (currentPrayer !== null && players[currentPrayer].paused && !players[currentPrayer].ended) {
-                            players[currentPrayer].play().catch(e=>console.log(e));
-                            isPlaying = true;
-                            let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                            document.getElementById('status').innerText = `Playing: ${displayText}...`;
-                        } else {
-                            playNext();
-                        }
-                    });
-
-                    navigator.mediaSession.setActionHandler('pause', () => {
-                        if (currentPrayer !== null) players[currentPrayer].pause();
-                        isPlaying = false;
-                        clearTimeout(repeatTimeout);
-                        document.getElementById('status').innerText = "Paused";
-                    });
-
+                    // Wire BOTH play and pause to the smart toggle to fix the double-click bug
+                    navigator.mediaSession.setActionHandler('play', togglePlayPause);
+                    navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
                 silentAudio.addEventListener('pause', () => {
-                    if (isPlaying && currentPrayer !== null && players[currentPrayer].paused) {
-                        isPlaying = false;
-                        clearTimeout(repeatTimeout);
-                        document.getElementById('status').innerText = "Paused";
-                    }
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
                 });
 
@@ -426,6 +465,8 @@
             isPlaying = false;
             releaseWakeLock(); 
             
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
+            
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
                 if (btn.id !== 'btn-reset') {
                     btn.classList.remove('active-prayer');
@@ -455,7 +496,7 @@
             requestWakeLock();
             silentAudio.play().catch(e => console.log(e));
 
-            // Silently "unlock" all other players with iOS on the first tap
+            // Silently unlock all audio engines on first screen tap
             if (!isUnlocked) {
                 isUnlocked = true;
                 prayerIds.forEach(pId => {
@@ -474,6 +515,7 @@
             let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
             let p = players[id];
             p.currentTime = 0;
@@ -481,31 +523,16 @@
             let playPromise = p.play();
             if (playPromise !== undefined) {
                 playPromise.catch((e) => {
-                    statusDiv.innerText = "Error: MP3 not found.";
+                    statusDiv.innerText = "Error: Audio playback failed.";
                     isPlaying = false;
                 });
             }
         }
 
-        // Spacebar / Headset button mappings
         document.addEventListener('keydown', (e) => {
             if (e.code === 'MediaPlayPause' || e.code === 'Space') {
                 e.preventDefault();
-                if (isPlaying) {
-                    if (currentPrayer !== null) players[currentPrayer].pause();
-                    isPlaying = false;
-                    clearTimeout(repeatTimeout);
-                    document.getElementById('status').innerText = "Paused";
-                } else {
-                    if (currentPrayer !== null && players[currentPrayer].paused && !players[currentPrayer].ended) {
-                        players[currentPrayer].play().catch(e=>console.log(e));
-                        isPlaying = true;
-                        let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                        document.getElementById('status').innerText = `Playing: ${displayText}...`;
-                    } else {
-                        playNext();
-                    }
-                }
+                togglePlayPause();
             } else if (e.code === 'MediaTrackNext') {
                 e.preventDefault();
                 playNext();

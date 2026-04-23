@@ -262,6 +262,7 @@
         let mediaSessionInitialized = false;
         let isUnlocked = false;
         let isFirstPlay = true;
+        let hasCompletedOnce = false;
         let wakeLock = null; 
         let repeatTimeout = null;
         
@@ -284,6 +285,8 @@
                         a.playsInline = true;
                         
                         a.addEventListener('ended', () => {
+                            hasCompletedOnce = true;
+                            
                             if (isRepeatOn) {
                                 repeatTimeout = setTimeout(() => {
                                     a.currentTime = 0;
@@ -320,7 +323,6 @@
             });
         });
 
-        // Silent audio to hook iOS headset media controls continuously
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -350,7 +352,6 @@
 
         silentAudio.src = createSilentAudioURL();
 
-        // Get a head start on waking up Bluetooth if the user touches anywhere on the screen
         document.addEventListener('touchstart', function handleFirstTouch() {
             if (!isUnlocked) {
                 isUnlocked = true;
@@ -464,6 +465,7 @@
                 players[currentPrayer].currentTime = 0;
             }
             clearTimeout(repeatTimeout);
+            hasCompletedOnce = false;
             
             currentPrayer = null;
             isPlaying = false;
@@ -502,10 +504,8 @@
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                // 1. Instantly fire the silent audio to wake up the Bluetooth radio
                 silentAudio.play().catch(e => console.log(e));
                 
-                // 2. Silently unlock all other players in the background if they weren't already
                 if (!isUnlocked) {
                     isUnlocked = true;
                     prayerIds.forEach(pId => {
@@ -515,7 +515,6 @@
 
                 statusDiv.innerText = "Waking up audio...";
                 
-                // 3. Wait 500ms for Bluetooth to stabilize before pushing actual MP3
                 setTimeout(() => {
                     startPlayback(id);
                 }, 500);
@@ -530,8 +529,14 @@
 
             if (currentPrayer !== null && players[currentPrayer]) {
                 players[currentPrayer].pause();
+                
+                // If skipping and the previous prayer finished at least once, mark it played
+                if (hasCompletedOnce && currentPrayer !== id) {
+                    markAsPlayed(currentPrayer);
+                }
             }
             clearTimeout(repeatTimeout);
+            hasCompletedOnce = false;
             
             currentPrayer = id;
             updateButtonColors(id);

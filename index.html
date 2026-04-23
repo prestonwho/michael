@@ -2,23 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Locks zoom and scales to exact screen size -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <!-- iOS App styling -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <title>St. Michael Chaplet</title>
     <style>
-        /* Disable text selection and highlight colors */
         * {
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
         }
 
-        /* Lock the body from scrolling and bouncing (rubber-banding) */
         html, body {
             overflow: hidden;
             position: fixed;
@@ -28,7 +23,7 @@
             padding: 0;
             background-color: #f0f0f5;
             overscroll-behavior: none;
-            touch-action: none; /* Disables all browser pinch/pan gestures */
+            touch-action: none;
         }
 
         .app-container {
@@ -185,7 +180,6 @@
             font-size: 14px;
         }
 
-        /* Landscape orientation warning */
         #landscape-warning {
             display: none;
             position: fixed;
@@ -251,7 +245,6 @@
     </div>
 
     <script>
-        // Extra JS layer to block iOS "rubber-band" bouncing on accidental scrolls
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -261,12 +254,31 @@
         let isRepeatOn = false;
         let mediaSessionInitialized = false;
         let wakeLock = null; 
+        let repeatTimeout = null;
         
-        // Primary Audio Player for MP3s
+        // Background Audio Preloading into Memory 
+        // This completely bypasses the iOS background network block
+        const audioUrls = {};
+        const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            prayerIds.forEach(id => {
+                fetch(`${id}.mp3`)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Not found");
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        audioUrls[id] = URL.createObjectURL(blob);
+                    })
+                    .catch(e => console.log("Failed to preload:", id));
+            });
+        });
+
+        // Audio Players
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
 
-        // Silent audio to hook iOS headset media controls
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -328,14 +340,17 @@
                         artist: 'Tap headset to play next'
                     });
 
-                    const handleHeadset = () => { playNext(); };
-                    navigator.mediaSession.setActionHandler('play', handleHeadset);
-                    navigator.mediaSession.setActionHandler('pause', handleHeadset);
-                    navigator.mediaSession.setActionHandler('nexttrack', handleHeadset);
+                    // Explicitly define Play, Pause, and Next
+                    // Removing an AirPod will now safely trigger the 'pause' action
+                    navigator.mediaSession.setActionHandler('play', () => playNext());
+                    navigator.mediaSession.setActionHandler('pause', () => {
+                        audioPlayer.pause();
+                        isPlaying = false;
+                        clearTimeout(repeatTimeout);
+                    });
+                    navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
-                // Just quietly resume the silent audio if iOS pauses it (e.g. taking out an AirPod) 
-                // to maintain our media control lock, but DO NOT trigger the actual prayer audio.
                 silentAudio.addEventListener('pause', () => {
                     setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
                 });
@@ -367,7 +382,6 @@
 
         function toggleRepeat() {
             isRepeatOn = !isRepeatOn;
-            audioPlayer.loop = isRepeatOn; // Update current player loop state
             
             const btn = document.getElementById('btn-repeat');
             if (isRepeatOn) {
@@ -382,6 +396,7 @@
         function resetState() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
+            clearTimeout(repeatTimeout);
             
             currentPrayer = null;
             isPlaying = false;
@@ -412,13 +427,12 @@
         function playAudio(id) {
             const statusDiv = document.getElementById('status');
             
-            // Wake Lock & Media Controls
             initMediaSession();
             requestWakeLock();
             silentAudio.play().catch(e => console.log(e));
 
-            // Reset existing audio
             audioPlayer.pause();
+            clearTimeout(repeatTimeout);
             currentPrayer = id;
             updateButtonColors(id);
 
@@ -426,9 +440,9 @@
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
 
-            // Play the MP3 from the root folder
-            audioPlayer.src = `${id}.mp3`;
-            audioPlayer.loop = isRepeatOn; // Enforce loop setting
+            // Load MP3 from preloaded memory Blob if available, bypassing background network limits
+            audioPlayer.src = audioUrls[id] || `${id}.mp3`;
+            audioPlayer.loop = false; // We handle the loop manually now to add the delay
             
             audioPlayer.onerror = () => {
                 statusDiv.innerText = "Error: MP3 file not found.";
@@ -439,11 +453,23 @@
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     audioPlayer.onended = () => {
-                        // This only triggers when loop is false
-                        isPlaying = false;
-                        if (currentPrayer === id) {
-                            markAsPlayed(id);
-                            statusDiv.innerText = "";
+                        if (isRepeatOn) {
+                            // Delay the repeat by 500 milliseconds (half a second)
+                            repeatTimeout = setTimeout(() => {
+                                audioPlayer.currentTime = 0;
+                                audioPlayer.play().catch(e=>console.log(e));
+                            }, 500); 
+                        } else {
+                            isPlaying = false;
+                            if (currentPrayer === id) {
+                                markAsPlayed(id);
+                                statusDiv.innerText = "";
+                                
+                                // Reset buttons 1 second after the closing prayer finishes
+                                if (id === 0) {
+                                    setTimeout(resetState, 1000);
+                                }
+                            }
                         }
                     };
                 }).catch((e) => {

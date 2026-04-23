@@ -256,8 +256,6 @@
         let wakeLock = null; 
         let repeatTimeout = null;
         
-        // Background Audio Preloading into Memory 
-        // This completely bypasses the iOS background network block
         const audioUrls = {};
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
         
@@ -275,7 +273,6 @@
             });
         });
 
-        // Audio Players
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
 
@@ -308,7 +305,6 @@
 
         silentAudio.src = createSilentAudioURL();
 
-        // Screen Wake Lock
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
             try {
@@ -331,23 +327,35 @@
             }
         });
 
-        // Setup Headset Controls
         function initMediaSession() {
             if (!mediaSessionInitialized) {
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
                         title: 'St. Michael Chaplet',
-                        artist: 'Tap headset to play next'
+                        artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
-                    // Explicitly define Play, Pause, and Next
-                    // Removing an AirPod will now safely trigger the 'pause' action
-                    navigator.mediaSession.setActionHandler('play', () => playNext());
+                    // Resume if paused, otherwise play next
+                    navigator.mediaSession.setActionHandler('play', () => {
+                        if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                            audioPlayer.play().catch(e=>console.log(e));
+                            isPlaying = true;
+                            let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                            document.getElementById('status').innerText = `Playing: ${displayText}...`;
+                        } else {
+                            playNext();
+                        }
+                    });
+
+                    // Explicitly pause
                     navigator.mediaSession.setActionHandler('pause', () => {
                         audioPlayer.pause();
                         isPlaying = false;
                         clearTimeout(repeatTimeout);
+                        document.getElementById('status').innerText = "Paused";
                     });
+
+                    // Explicitly skip
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
@@ -440,9 +448,8 @@
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
 
-            // Load MP3 from preloaded memory Blob if available, bypassing background network limits
             audioPlayer.src = audioUrls[id] || `${id}.mp3`;
-            audioPlayer.loop = false; // We handle the loop manually now to add the delay
+            audioPlayer.loop = false; 
             
             audioPlayer.onerror = () => {
                 statusDiv.innerText = "Error: MP3 file not found.";
@@ -454,7 +461,6 @@
                 playPromise.then(() => {
                     audioPlayer.onended = () => {
                         if (isRepeatOn) {
-                            // Delay the repeat by 500 milliseconds (half a second)
                             repeatTimeout = setTimeout(() => {
                                 audioPlayer.currentTime = 0;
                                 audioPlayer.play().catch(e=>console.log(e));
@@ -465,7 +471,6 @@
                                 markAsPlayed(id);
                                 statusDiv.innerText = "";
                                 
-                                // Reset buttons 1 second after the closing prayer finishes
                                 if (id === 0) {
                                     setTimeout(resetState, 1000);
                                 }
@@ -479,9 +484,26 @@
             }
         }
 
-        // Spacebar / Headset button mappings
+        // Updated Keyboard Bindings to match the new Pause/Resume logic
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'MediaPlayPause' || e.code === 'MediaTrackNext' || e.code === 'Space') {
+            if (e.code === 'MediaPlayPause' || e.code === 'Space') {
+                e.preventDefault();
+                if (isPlaying) {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    clearTimeout(repeatTimeout);
+                    document.getElementById('status').innerText = "Paused";
+                } else {
+                    if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                        audioPlayer.play().catch(e=>console.log(e));
+                        isPlaying = true;
+                        let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                        document.getElementById('status').innerText = `Playing: ${displayText}...`;
+                    } else {
+                        playNext();
+                    }
+                }
+            } else if (e.code === 'MediaTrackNext') {
                 e.preventDefault();
                 playNext();
             }

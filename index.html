@@ -295,25 +295,20 @@
         let repeatTimeout = null;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        
-        // Use standard Blob URLs so iOS can hand them off to the background media daemon
-        const audioUrls = {};
         let loadedCount = 0;
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
 
-            prayerIds.forEach(id => {
-                fetch(`${id}.mp3`)
+            // Forcefully load the files into the browser's hard disk cache
+            Promise.all(prayerIds.map(id => {
+                return fetch(`${id}.mp3`, { cache: "force-cache" })
                     .then(res => {
                         if (!res.ok) throw new Error("Not found");
-                        return res.blob();
+                        return res.blob(); // Reads it fully so it stays in cache
                     })
-                    .then(blob => {
-                        // Create standard Blob URLs
-                        audioUrls[id] = URL.createObjectURL(blob);
-                        
+                    .then(() => {
                         const btn = document.getElementById(`btn-${id}`);
                         if (btn) {
                             btn.disabled = false;
@@ -331,52 +326,48 @@
                         } else {
                             statusDiv.innerText = `Loading audio... ${loadedCount}/${prayerIds.length}`;
                         }
-                    })
-                    .catch(e => {
-                        statusDiv.innerText = "Error loading audio files. Please refresh.";
                     });
+            })).catch(e => {
+                document.getElementById('status').innerText = "Error loading audio files. Please refresh.";
             });
         });
 
-        // Creates a pure 5-second blank WAV file natively in memory
-        function createSilentAudioURL() {
-            const sampleRate = 44100;
-            const numSamples = sampleRate * 5; 
-            const buffer = new ArrayBuffer(44 + numSamples * 2);
-            const view = new DataView(buffer);
-            view.setUint32(0, 0x52494646, false);
-            view.setUint32(4, 36 + numSamples * 2, true);
-            view.setUint32(8, 0x57415645, false);
-            view.setUint32(12, 0x666D7420, false); 
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            view.setUint32(36, 0x64617461, false);
-            view.setUint32(40, numSamples * 2, true);
-            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
-        }
-
-        const silentBlobUrl = createSilentAudioURL();
-
-        // The continuous silent audio track to keep iOS background alive
+        // Generate a tiny Base64 pure silent track. This avoids the "Network Timeout" completely.
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
-        silentAudio.src = silentBlobUrl;
+
+        const sampleRate = 8000;
+        const numSamples = sampleRate * 2; 
+        const buffer = new ArrayBuffer(44 + numSamples * 2);
+        const view = new DataView(buffer);
+        view.setUint32(0, 0x52494646, false);
+        view.setUint32(4, 36 + numSamples * 2, true);
+        view.setUint32(8, 0x57415645, false);
+        view.setUint32(12, 0x666D7420, false); 
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        view.setUint32(36, 0x64617461, false);
+        view.setUint32(40, numSamples * 2, true);
+
+        const reader = new FileReader();
+        reader.onloadend = () => { silentAudio.src = reader.result; };
+        reader.readAsDataURL(new Blob([buffer], { type: 'audio/wav' }));
 
         document.addEventListener('touchstart', function handleFirstTouch() {
             if (!isUnlocked) {
                 isUnlocked = true;
-                silentAudio.play().catch(e => console.log(e));
+                if (silentAudio.src) silentAudio.play().catch(e => console.log(e));
             }
             document.removeEventListener('touchstart', handleFirstTouch);
         }, { passive: true });
 
-        // The SINGLE master audio player for all real prayers
+        // The SINGLE master audio player. We now use standard relative URLs.
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
         
@@ -439,9 +430,10 @@
         function togglePlayPause() {
             if (isPlaying) {
                 audioPlayer.pause();
+                // We leave the silent track running so iOS never drops the media session.
             } else {
                 if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
-                    if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e));
+                    if (silentAudio.paused && silentAudio.src) silentAudio.play().catch(e=>console.log(e));
                     audioPlayer.play().catch(e=>console.log(e));
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
                     document.getElementById('status').innerText = `Playing: ${displayText}...`;
@@ -546,20 +538,20 @@
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                // Keep background session alive
-                silentAudio.play().catch(e => console.log(e));
-                
+                if (silentAudio.src) silentAudio.play().catch(e => console.log(e));
                 document.getElementById('status').innerText = "Waking up audio...";
                 
-                // Wake up bluetooth + initialize main player with a valid Blob URL
-                audioPlayer.src = silentBlobUrl;
-                audioPlayer.play().catch(e => console.log(e));
+                // Wake up bluetooth using the Base64 silent track to avoid network calls
+                if (silentAudio.src) {
+                    audioPlayer.src = silentAudio.src;
+                    audioPlayer.play().catch(e => console.log(e));
+                }
                 
                 setTimeout(() => {
                     startPlayback(id);
                 }, 500);
             } else {
-                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
+                if (silentAudio.paused && silentAudio.src) silentAudio.play().catch(e => console.log(e));
                 startPlayback(id);
             }
         }
@@ -581,8 +573,8 @@
             let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
 
-            // Point the active, blessed audio player to the requested standard URL
-            audioPlayer.src = audioUrls[id];
+            // Give the OS media player standard URLs so it can grab them from the disk cache flawlessly
+            audioPlayer.src = `${id}.mp3`;
             audioPlayer.currentTime = 0;
             
             let playPromise = audioPlayer.play();

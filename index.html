@@ -25,7 +25,11 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            background-color: #f0f0f5;
+            /* Subtle iOS-style mesh gradient background so the glass has something to blur */
+            background-color: #eef2f9;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0px, transparent 60%),
+                radial-gradient(at 100% 100%, rgba(162, 0, 255, 0.08) 0px, transparent 60%);
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -47,10 +51,11 @@
             color: #333;
             margin-bottom: 20px;
             text-align: center;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
         }
         
         button:disabled {
-            opacity: 0.4;
+            opacity: 0.5;
             cursor: not-allowed;
             pointer-events: none;
         }
@@ -62,34 +67,79 @@
             max-width: 300px;
             margin-bottom: 20px;
         }
+
+        /* --- LIQUID GLASS BASE STYLES --- */
+        .action-btn, .btn, .nav-btn {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .action-btn:active:not(:disabled), .btn:active:not(:disabled), .nav-btn:active:not(:disabled) {
+            transform: scale(0.94);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Specific Button Shapes & Layouts */
         .action-btn {
-            background-color: #fff;
-            border: 1px solid #007aff;
             border-radius: 20px;
             padding: 10px 15px;
             font-size: 14px;
             font-weight: bold;
             color: #007aff;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s;
-        }
-        .action-btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e5e5ea;
-        }
-        .action-btn.active-prayer {
-            background-color: #007aff !important;
-            color: #fff !important;
-            border-color: #0056b3 !important;
-        }
-        .action-btn.played-prayer {
-            background-color: #e5e5ea;
-            color: #8e8e93;
-            border-color: #d1d1d6;
         }
         
+        .btn {
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #007aff;
+            justify-self: center;
+        }
+
+        .nav-btn {
+            border-radius: 20px;
+            width: 80px;
+            padding: 10px 0;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* --- LIQUID GLASS ACTIVE & PLAYED STATES --- */
+        .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
+            background: rgba(0, 122, 255, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+            color: white !important;
+            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .action-btn.played-prayer, .btn.played-prayer {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #999;
+            box-shadow: none;
+        }
+
+        /* Grid Layouts */
         .keypad-container {
             display: flex;
             flex-direction: column;
@@ -104,38 +154,7 @@
             gap: 15px;
             width: 100%;
         }
-        .btn {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            font-size: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            color: #007aff;
-            justify-self: center;
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s;
-        }
-        .btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e5e5ea;
-        }
-        .btn.active-prayer {
-            background-color: #007aff !important;
-            color: white !important;
-            border-color: #0056b3 !important;
-        }
-        .btn.played-prayer {
-            background-color: #e5e5ea;
-            color: #8e8e93;
-            border-color: #d1d1d6;
-        }
-        
+
         .bottom-nav {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -149,39 +168,12 @@
         }
         .prev-container { justify-self: start; }
         .next-container { justify-self: end; }
-        
-        .nav-btn {
-            background-color: #f8f9fa;
-            border: 1px solid #ccc;
-            border-radius: 20px;
-            width: 80px;
-            padding: 10px 0;
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            -webkit-tap-highlight-color: transparent;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .nav-btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e2e6ea;
-        }
-        .nav-btn.active-repeat {
-            background-color: #007aff !important;
-            color: white !important;
-            border-color: #0056b3 !important;
-        }
 
         .subtitle {
             font-size: 14px;
             color: #666;
             text-align: center;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
         #status {
@@ -191,6 +183,7 @@
             font-weight: bold;
             text-align: center;
             font-size: 14px;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
         /* Landscape Orientation - Split View */
@@ -247,11 +240,11 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet v3</h1>
+        <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;" disabled>Reset</button>
+            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;" disabled>Reset</button>
         </div>
 
         <div class="keypad-container">

@@ -79,9 +79,9 @@
             background-color: #e5e5ea;
         }
         .action-btn.active-prayer {
-            background-color: #28a745 !important;
+            background-color: #007aff !important;
             color: #fff !important;
-            border-color: #218838 !important;
+            border-color: #0056b3 !important;
         }
         .action-btn.played-prayer {
             background-color: #e5e5ea;
@@ -125,9 +125,9 @@
             background-color: #e5e5ea;
         }
         .btn.active-prayer {
-            background-color: #28a745 !important;
+            background-color: #007aff !important;
             color: white !important;
-            border-color: #218838 !important;
+            border-color: #0056b3 !important;
         }
         .btn.played-prayer {
             background-color: #e5e5ea;
@@ -457,8 +457,6 @@
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
-                // The aggressive loop that caused the speaker pop has been permanently removed from here.
-
                 mediaSessionInitialized = true;
             }
         }
@@ -537,6 +535,9 @@
             initMediaSession();
             requestWakeLock();
 
+            // Highlight the button instantly so the UI feels responsive
+            updateButtonColors(id);
+
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
@@ -545,9 +546,10 @@
                 
                 document.getElementById('status').innerText = "Waking up audio...";
                 
+                // 750ms delay specifically for the very first play to give Bluetooth more time to connect
                 setTimeout(() => {
                     startPlayback(id);
-                }, 500);
+                }, 750);
             } else {
                 if (silentAudio.paused) silentAudio.play().catch(e => console.log(e)); // Wake the background track
                 startPlayback(id);
@@ -566,7 +568,7 @@
             hasCompletedOnce = false;
             
             currentPrayer = id;
-            updateButtonColors(id);
+            updateButtonColors(id); // Re-run to ensure state is completely in sync
 
             let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;

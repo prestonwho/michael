@@ -79,9 +79,9 @@
             background-color: #e5e5ea;
         }
         .action-btn.active-prayer {
-            background-color: #007aff !important;
+            background-color: #28a745 !important;
             color: #fff !important;
-            border-color: #0056b3 !important;
+            border-color: #218838 !important;
         }
         .action-btn.played-prayer {
             background-color: #e5e5ea;
@@ -125,9 +125,9 @@
             background-color: #e5e5ea;
         }
         .btn.active-prayer {
-            background-color: #007aff !important;
+            background-color: #28a745 !important;
             color: white !important;
-            border-color: #0056b3 !important;
+            border-color: #218838 !important;
         }
         .btn.played-prayer {
             background-color: #e5e5ea;
@@ -431,6 +431,7 @@
                 if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
                 if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                    if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e)); // Restores session if OS had paused it
                     audioPlayer.play().catch(e=>console.log(e));
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
@@ -456,9 +457,7 @@
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
-                silentAudio.addEventListener('pause', () => {
-                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
-                });
+                // The aggressive loop that caused the speaker pop has been permanently removed from here.
 
                 mediaSessionInitialized = true;
             }
@@ -500,6 +499,9 @@
         function resetState() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
+            silentAudio.pause(); // Ensure the silent track resets too
+            silentAudio.currentTime = 0;
+            
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
             
@@ -547,7 +549,7 @@
                     startPlayback(id);
                 }, 500);
             } else {
-                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
+                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e)); // Wake the background track
                 startPlayback(id);
             }
         }
@@ -566,7 +568,7 @@
             currentPrayer = id;
             updateButtonColors(id);
 
-            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";

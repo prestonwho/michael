@@ -457,6 +457,11 @@
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
+                // The Aggressive Loop: Forces the silent track to stay alive against iOS's will
+                silentAudio.addEventListener('pause', () => {
+                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
+                });
+
                 mediaSessionInitialized = true;
             }
         }
@@ -497,7 +502,7 @@
         function resetState() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
-            silentAudio.pause(); // Ensure the silent track resets too
+            silentAudio.pause(); // Note: Due to the aggressive loop, this will automatically restart the silent track, which is expected behavior to keep the session alive.
             silentAudio.currentTime = 0;
             
             clearTimeout(repeatTimeout);

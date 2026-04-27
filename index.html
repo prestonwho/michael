@@ -293,30 +293,39 @@
         let shouldSilenceBePlaying = false;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        
-        // AUDIO POOL: Instead of one player changing tracks, we have 11 separate pre-loaded players
-        const audioPlayers = {};
+        const audioData = {};
         let loadedCount = 0;
+
+        // THE DJ DOUBLE-BUFFER: Two players so we can crossfade without dropping the iOS Audio Session
+        const player1 = new Audio();
+        player1.playsInline = true;
+        player1.addEventListener('ended', onPlayerEnded);
+
+        const player2 = new Audio();
+        player2.playsInline = true;
+        player2.addEventListener('ended', onPlayerEnded);
+
+        let activeAudioPlayer = player1;
         
-        // Generic handler for when any prayer finishes
-        function onPlayerEnded() {
+        function onPlayerEnded(e) {
+            // Ignore events from the inactive buffer
+            if (e.target !== activeAudioPlayer) return;
+
             hasCompletedOnce = true;
             
             if (isRepeatOn) {
-                // Crown Transfer
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e=>console.log(e));
                 
                 repeatTimeout = setTimeout(() => {
                     shouldSilenceBePlaying = false;
                     silencePlayer.pause();
-                    audioPlayers[currentPrayer].currentTime = 0;
-                    audioPlayers[currentPrayer].play().catch(e => console.log(e));
+                    activeAudioPlayer.currentTime = 0;
+                    activeAudioPlayer.play().catch(e => console.log(e));
                 }, 500); 
             } else {
                 isPlaying = false;
                 
-                // Crown Transfer
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e=>console.log(e));
                 
@@ -345,12 +354,7 @@
                         return new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                                // Create a dedicated Audio element for this specific track
-                                const player = new Audio();
-                                player.playsInline = true;
-                                player.src = reader.result;
-                                player.addEventListener('ended', onPlayerEnded);
-                                audioPlayers[id] = player;
+                                audioData[id] = reader.result;
                                 
                                 const btn = document.getElementById(`btn-${id}`);
                                 if (btn) {
@@ -437,7 +441,7 @@
 
         function togglePlayPause() {
             if (isPlaying) {
-                audioPlayers[currentPrayer].pause();
+                activeAudioPlayer.pause();
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e=>console.log(e));
                 
@@ -445,10 +449,10 @@
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
             } else {
-                if (currentPrayer !== null && audioPlayers[currentPrayer].paused && !audioPlayers[currentPrayer].ended) {
+                if (currentPrayer !== null && activeAudioPlayer.paused && !activeAudioPlayer.ended) {
                     shouldSilenceBePlaying = false;
                     silencePlayer.pause();
-                    audioPlayers[currentPrayer].play().catch(e=>console.log(e));
+                    activeAudioPlayer.play().catch(e=>console.log(e));
                     
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
@@ -513,11 +517,10 @@
             isAppActive = false;
             shouldSilenceBePlaying = false;
             
-            // Pause all players
-            Object.values(audioPlayers).forEach(p => {
-                p.pause();
-                p.currentTime = 0;
-            });
+            player1.pause();
+            player1.currentTime = 0;
+            player2.pause();
+            player2.currentTime = 0;
             
             silencePlayer.pause(); 
             silencePlayer.currentTime = 0;
@@ -568,21 +571,6 @@
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e => console.log(e));
                 
-                // MASS UNLOCK: Because the user physically tapped the screen, we have a 1-second 
-                // window where iOS allows us to unlock audio. We rapidly play and pause ALL 11 tracks
-                // at volume 0 to permanently unlock them for background playback.
-                Object.values(audioPlayers).forEach(p => {
-                    p.volume = 0;
-                    let promise = p.play();
-                    if (promise !== undefined) {
-                        promise.then(() => {
-                            p.pause();
-                            p.currentTime = 0;
-                            p.volume = 1;
-                        }).catch(e => console.log(e));
-                    }
-                });
-                
                 document.getElementById('status').innerText = "Waking up audio...";
                 
                 setTimeout(() => {
@@ -596,11 +584,9 @@
         function startPlayback(id) {
             const statusDiv = document.getElementById('status');
 
-            shouldSilenceBePlaying = false;
-            silencePlayer.pause();
-            
-            // Pause all other tracks just to be safe
-            Object.values(audioPlayers).forEach(p => p.pause());
+            // Force silence player to hold the audio line so iOS doesn't suspend us during the switch
+            shouldSilenceBePlaying = true;
+            silencePlayer.play().catch(e=>console.log(e));
             
             if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
                 markAsPlayed(currentPrayer);
@@ -616,16 +602,27 @@
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
-            // NO SRC CHANGE: Simply select the pre-loaded player for this specific track
-            const activePlayer = audioPlayers[id];
-            activePlayer.currentTime = 0;
+            // PREPARE THE NEXT BUFFER (DJ Turntable approach)
+            let nextPlayer = (activeAudioPlayer === player1) ? player2 : player1;
+            nextPlayer.src = audioData[id];
+            nextPlayer.currentTime = 0;
             
-            let playPromise = activePlayer.play();
+            let playPromise = nextPlayer.play();
             if (playPromise !== undefined) {
-                playPromise.catch((e) => {
+                playPromise.then(() => {
+                    // NEW AUDIO HAS SUCCESSFULLY STARTED. We can safely drop the old tracks.
+                    shouldSilenceBePlaying = false;
+                    silencePlayer.pause();
+                    
+                    activeAudioPlayer.pause();
+                    activeAudioPlayer = nextPlayer; // Officially swap the active tracker
+                }).catch((e) => {
                     statusDiv.innerText = "Error: Audio playback failed.";
                     isPlaying = false;
                 });
+            } else {
+                // Fallback for older devices
+                activeAudioPlayer = nextPlayer;
             }
         }
 

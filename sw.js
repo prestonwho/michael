@@ -1,4 +1,4 @@
-const CACHE_NAME = 'st-michael-v1';
+const CACHE_NAME = 'st-michael-v3';
 
 // List of all the exact files the app needs to run completely offline
 const URLS_TO_CACHE = [

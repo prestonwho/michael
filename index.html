@@ -79,9 +79,9 @@
             background-color: #e5e5ea;
         }
         .action-btn.active-prayer {
-            background-color: #28a745 !important;
+            background-color: #007aff !important;
             color: #fff !important;
-            border-color: #218838 !important;
+            border-color: #0056b3 !important;
         }
         .action-btn.played-prayer {
             background-color: #e5e5ea;
@@ -125,9 +125,9 @@
             background-color: #e5e5ea;
         }
         .btn.active-prayer {
-            background-color: #28a745 !important;
+            background-color: #007aff !important;
             color: white !important;
-            border-color: #218838 !important;
+            border-color: #0056b3 !important;
         }
         .btn.played-prayer {
             background-color: #e5e5ea;
@@ -227,9 +227,11 @@
             .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
+            /* Make keypad 1-9 much bigger */
             .btn { width: 85px; height: 85px; font-size: 36px; }
             .keypad { gap: 15px; }
             
+            /* Adjust the bottom 3 buttons */
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
             .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
@@ -289,15 +291,14 @@
         let isRepeatOn = false;
         let mediaSessionInitialized = false;
         let isFirstPlay = true;
-        let isUnlocked = false;
         let hasCompletedOnce = false;
         let wakeLock = null; 
         let repeatTimeout = null;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
         
-        // 11 Separate Audio Elements using pure Base64 strings
-        const players = {};
+        // This stores the raw MP3 data directly in memory as Base64 strings
+        const audioData = {};
         let loadedCount = 0;
         
         window.addEventListener('DOMContentLoaded', () => {
@@ -314,23 +315,8 @@
                         return new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                                // Create the dedicated player for this track with Base64 data
-                                const p = new Audio(reader.result);
-                                p.playsInline = true;
-                                
-                                p.addEventListener('pause', () => {
-                                    if (currentPrayer === id) syncMediaSessionState();
-                                });
-
-                                p.addEventListener('play', () => {
-                                    if (currentPrayer === id) syncMediaSessionState();
-                                });
-                                
-                                p.addEventListener('ended', () => {
-                                    if (currentPrayer === id) handlePrayerEnded(id);
-                                });
-
-                                players[id] = p;
+                                // Save the exact file data as pure text in memory
+                                audioData[id] = reader.result;
                                 
                                 const btn = document.getElementById(`btn-${id}`);
                                 if (btn) {
@@ -360,66 +346,59 @@
             });
         });
 
-        // The background session keep-alive track
-        const silentAudio = new Audio();
-        silentAudio.loop = true;
-        silentAudio.playsInline = true;
-        // Direct inline Base64 silent WAV so it requires zero processing
-        silentAudio.src = "audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-
-        // Safely primes all audio tracks into iOS memory without making any sound
-        function unlockAllAudio() {
-            if (isUnlocked) return;
-            isUnlocked = true;
-            
-            silentAudio.play().catch(e => console.log(e));
-            
-            prayerIds.forEach(id => {
-                if (players[id]) {
-                    players[id].load(); // Silently primes the player
-                }
-            });
-        }
-
-        document.body.addEventListener('touchstart', unlockAllAudio, { once: true, passive: true });
-        document.body.addEventListener('click', unlockAllAudio, { once: true, passive: true });
-
-        function handlePrayerEnded(id) {
+        // The single master audio player
+        const audioPlayer = new Audio();
+        audioPlayer.playsInline = true;
+        
+        audioPlayer.addEventListener('ended', () => {
             hasCompletedOnce = true;
             
             if (isRepeatOn) {
                 repeatTimeout = setTimeout(() => {
-                    if (players[id]) {
-                        players[id].currentTime = 0;
-                        players[id].play().catch(e => console.log(e));
-                    }
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play().catch(e => console.log(e));
                 }, 500); 
             } else {
-                markAsPlayed(id);
-                document.getElementById('status').innerText = "";
-                
-                if (id === 0) {
-                    setTimeout(resetState, 1000);
+                isPlaying = false;
+                if (currentPrayer !== null) {
+                    markAsPlayed(currentPrayer);
+                    document.getElementById('status').innerText = "";
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                    
+                    if (currentPrayer === 0) {
+                        setTimeout(resetState, 1000);
+                    }
                 }
             }
+        });
+
+        // Background media lock handler
+        const silentAudio = new Audio();
+        silentAudio.loop = true;
+        silentAudio.playsInline = true;
+
+        function createSilentAudioURL() {
+            const sampleRate = 44100;
+            const numSamples = sampleRate * 5; 
+            const buffer = new ArrayBuffer(44 + numSamples * 2);
+            const view = new DataView(buffer);
+            view.setUint32(0, 0x52494646, false);
+            view.setUint32(4, 36 + numSamples * 2, true);
+            view.setUint32(8, 0x57415645, false);
+            view.setUint32(12, 0x666D7420, false); 
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            view.setUint32(36, 0x64617461, false);
+            view.setUint32(40, numSamples * 2, true);
+            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
         }
 
-        function syncMediaSessionState() {
-            if (currentPrayer !== null && players[currentPrayer]) {
-                const p = players[currentPrayer];
-                isPlaying = !p.paused;
-                
-                const statusDiv = document.getElementById('status');
-                if (isPlaying) {
-                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                    statusDiv.innerText = `Playing: ${displayText}...`;
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
-                } else {
-                    if (statusDiv.innerText.startsWith("Playing")) statusDiv.innerText = "Paused";
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
-                }
-            }
-        }
+        silentAudio.src = createSilentAudioURL();
 
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
@@ -427,7 +406,7 @@
                 if (wakeLock !== null && wakeLock.released === false) return; 
                 wakeLock = await navigator.wakeLock.request('screen');
             } catch (err) {
-                console.log(err);
+                console.error('Wake Lock error:', err);
             }
         }
 
@@ -444,15 +423,22 @@
         });
 
         function togglePlayPause() {
-            if (currentPrayer === null || !players[currentPrayer]) return;
-            
-            const p = players[currentPrayer];
-            if (!p.paused) {
-                p.pause();
-                // Silent track keeps background alive while paused
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+                clearTimeout(repeatTimeout);
+                document.getElementById('status').innerText = "Paused";
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
-                if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e));
-                p.play().catch(e=>console.log(e));
+                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                    audioPlayer.play().catch(e=>console.log(e));
+                    isPlaying = true;
+                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                    document.getElementById('status').innerText = `Playing: ${displayText}...`;
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+                } else {
+                    playNext();
+                }
             }
         }
 
@@ -464,10 +450,16 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
+                    // Completely synchronous background execution
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
+
+                silentAudio.addEventListener('pause', () => {
+                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
+                });
+
                 mediaSessionInitialized = true;
             }
         }
@@ -506,20 +498,13 @@
         }
 
         function resetState() {
-            if (currentPrayer !== null && players[currentPrayer]) {
-                players[currentPrayer].pause();
-                players[currentPrayer].currentTime = 0;
-            }
-            
-            silentAudio.pause();
-            silentAudio.currentTime = 0;
-            
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
             
             currentPrayer = null;
             isPlaying = false;
-            isFirstPlay = true;
             releaseWakeLock(); 
             
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
@@ -549,12 +534,13 @@
         function playAudio(id) {
             initMediaSession();
             requestWakeLock();
-            unlockAllAudio();
 
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                if (silentAudio.src) silentAudio.play().catch(e => console.log(e));
+                // Wake up bluetooth
+                silentAudio.play().catch(e => console.log(e));
+                
                 document.getElementById('status').innerText = "Waking up audio...";
                 
                 setTimeout(() => {
@@ -567,28 +553,34 @@
         }
 
         function startPlayback(id) {
-            // Stop old track
-            if (currentPrayer !== null && players[currentPrayer] && currentPrayer !== id) {
-                players[currentPrayer].pause();
-                if (hasCompletedOnce) {
-                    markAsPlayed(currentPrayer);
-                }
-            }
+            const statusDiv = document.getElementById('status');
+
+            audioPlayer.pause();
             
+            if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
+                markAsPlayed(currentPrayer);
+            }
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
+            
             currentPrayer = id;
             updateButtonColors(id);
 
-            // Instantly play new track
-            if (players[id]) {
-                players[id].currentTime = 0;
-                let playPromise = players[id].play();
-                if (playPromise !== undefined) {
-                    playPromise.catch((e) => {
-                        document.getElementById('status').innerText = "Error: Audio playback failed.";
-                    });
-                }
+            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            statusDiv.innerText = `Playing: ${displayText}...`;
+            isPlaying = true;
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+
+            // Inject the raw base64 data into the active player
+            audioPlayer.src = audioData[id];
+            audioPlayer.currentTime = 0;
+            
+            let playPromise = audioPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((e) => {
+                    statusDiv.innerText = "Error: Audio playback failed.";
+                    isPlaying = false;
+                });
             }
         }
 

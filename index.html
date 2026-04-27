@@ -25,7 +25,6 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            /* Subtle iOS-style mesh gradient background so the glass has something to blur */
             background-color: #eef2f9;
             background-image: 
                 radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0px, transparent 60%),
@@ -68,7 +67,6 @@
             margin-bottom: 20px;
         }
 
-        /* --- LIQUID GLASS BASE STYLES --- */
         .action-btn, .btn, .nav-btn {
             background: rgba(255, 255, 255, 0.45);
             backdrop-filter: blur(16px);
@@ -85,7 +83,6 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
         }
 
-        /* Specific Button Shapes & Layouts */
         .action-btn {
             border-radius: 20px;
             padding: 10px 15px;
@@ -123,7 +120,6 @@
             text-align: center;
         }
 
-        /* --- LIQUID GLASS ACTIVE & PLAYED STATES --- */
         .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
             background: rgba(0, 122, 255, 0.7) !important;
             border-color: rgba(255, 255, 255, 0.4) !important;
@@ -139,7 +135,6 @@
             box-shadow: none;
         }
 
-        /* Grid Layouts */
         .keypad-container {
             display: flex;
             flex-direction: column;
@@ -186,7 +181,6 @@
             text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
-        /* Landscape Orientation - Split View */
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
@@ -221,11 +215,9 @@
             .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
-            /* Make keypad 1-9 much bigger */
             .btn { width: 85px; height: 85px; font-size: 36px; }
             .keypad { gap: 15px; }
             
-            /* Adjust the bottom 3 buttons */
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
             .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
@@ -276,7 +268,6 @@
     </div>
 
     <script>
-        // Register the Offline Service Worker for the PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -298,9 +289,10 @@
         let wakeLock = null; 
         let repeatTimeout = null;
         
-        const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+        // KILL SWITCH: when false, the aggressive loop shuts down to save battery
+        let isAppActive = false;
         
-        // This stores the raw MP3 data directly in memory as Base64 strings
+        const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
         const audioData = {};
         let loadedCount = 0;
         
@@ -318,7 +310,6 @@
                         return new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                                // Save the exact file data as pure text in memory
                                 audioData[id] = reader.result;
                                 
                                 const btn = document.getElementById(`btn-${id}`);
@@ -349,7 +340,6 @@
             });
         });
 
-        // The single master audio player
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
         
@@ -367,8 +357,6 @@
                     markAsPlayed(currentPrayer);
                     document.getElementById('status').innerText = "";
                     
-                    // FAKE PLAY HACK: We DO NOT set playbackState to paused here. iOS still thinks we are playing.
-                    
                     if (currentPrayer === 0) {
                         setTimeout(resetState, 1000);
                     }
@@ -376,7 +364,6 @@
             }
         });
 
-        // Background media lock handler
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
@@ -432,10 +419,9 @@
                 isPlaying = false;
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
-                // FAKE PLAY HACK: We DO NOT set playbackState to paused here. iOS still thinks we are playing.
             } else {
                 if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
-                    if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e)); // Restores session if OS had paused it
+                    if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e)); 
                     audioPlayer.play().catch(e=>console.log(e));
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
@@ -455,15 +441,18 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
-                    // Completely synchronous background execution
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
 
-                // The Aggressive Loop: Forces the silent track to stay alive against iOS's will
+                // The Aggressive Loop - Protected by the kill switch!
                 silentAudio.addEventListener('pause', () => {
-                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
+                    if (isAppActive) {
+                        setTimeout(() => { 
+                            if (isAppActive) silentAudio.play().catch(e=>console.log(e)); 
+                        }, 50);
+                    }
                 });
 
                 mediaSessionInitialized = true;
@@ -504,9 +493,14 @@
         }
 
         function resetState() {
+            // Flip the kill switch to completely disable the background session and save battery
+            isAppActive = false;
+            
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
-            silentAudio.pause(); // Note: Due to the aggressive loop, this will automatically restart the silent track, which is expected behavior to keep the session alive.
+            
+            // Now this will stay paused!
+            silentAudio.pause(); 
             silentAudio.currentTime = 0;
             
             clearTimeout(repeatTimeout);
@@ -514,6 +508,10 @@
             
             currentPrayer = null;
             isPlaying = false;
+            
+            // Re-arm the Bluetooth wake-up delay for the next time the user starts playing
+            isFirstPlay = true; 
+            
             releaseWakeLock(); 
             
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
@@ -541,26 +539,25 @@
         }
 
         function playAudio(id) {
+            // Wake the app up and arm the background heartbeat loop
+            isAppActive = true;
+            
             initMediaSession();
             requestWakeLock();
 
-            // Highlight the button instantly so the UI feels responsive
             updateButtonColors(id);
 
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                // Wake up bluetooth
                 silentAudio.play().catch(e => console.log(e));
-                
                 document.getElementById('status').innerText = "Waking up audio...";
                 
-                // 750ms delay specifically for the very first play to give Bluetooth more time to connect
                 setTimeout(() => {
                     startPlayback(id);
                 }, 750);
             } else {
-                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e)); // Wake the background track
+                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
                 startPlayback(id);
             }
         }
@@ -577,14 +574,13 @@
             hasCompletedOnce = false;
             
             currentPrayer = id;
-            updateButtonColors(id); // Re-run to ensure state is completely in sync
+            updateButtonColors(id);
 
             let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
-            // Inject the raw base64 data into the active player
             audioPlayer.src = audioData[id];
             audioPlayer.currentTime = 0;
             

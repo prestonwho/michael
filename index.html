@@ -247,7 +247,7 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet v2</h1>
+        <h1>St. Michael Chaplet v3</h1>
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
@@ -373,7 +373,8 @@
                 if (currentPrayer !== null) {
                     markAsPlayed(currentPrayer);
                     document.getElementById('status').innerText = "";
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                    
+                    // FAKE PLAY HACK: We DO NOT set playbackState to paused here. iOS still thinks we are playing.
                     
                     if (currentPrayer === 0) {
                         setTimeout(resetState, 1000);
@@ -438,7 +439,7 @@
                 isPlaying = false;
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
-                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                // FAKE PLAY HACK: We DO NOT set playbackState to paused here. iOS still thinks we are playing.
             } else {
                 if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
                     if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e)); // Restores session if OS had paused it

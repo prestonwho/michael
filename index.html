@@ -9,6 +9,7 @@
     
     <title>St. Michael Chaplet</title>
     <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     
     <style>
         * {
@@ -246,7 +247,7 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet</h1>
+        <h1>St. Michael Chaplet v1</h1>
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
@@ -282,6 +283,15 @@
     </div>
 
     <script>
+        // Register the Offline Service Worker for the PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('Offline storage activated'))
+                    .catch(error => console.log('Offline storage failed: ', error));
+            });
+        }
+
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });

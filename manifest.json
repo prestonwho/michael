@@ -2,7 +2,7 @@
   "name": "St. Michael Chaplet",
   "short_name": "St. Michael",
   "start_url": ".",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#f0f0f5",
   "theme_color": "#007aff",
   "icons": [

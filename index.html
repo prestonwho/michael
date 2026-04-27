@@ -289,13 +289,47 @@
         let wakeLock = null; 
         let repeatTimeout = null;
         
-        // KILL SWITCH flags
         let isAppActive = false;
         let shouldSilenceBePlaying = false;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        const audioData = {};
+        
+        // AUDIO POOL: Instead of one player changing tracks, we have 11 separate pre-loaded players
+        const audioPlayers = {};
         let loadedCount = 0;
+        
+        // Generic handler for when any prayer finishes
+        function onPlayerEnded() {
+            hasCompletedOnce = true;
+            
+            if (isRepeatOn) {
+                // Crown Transfer
+                shouldSilenceBePlaying = true;
+                silencePlayer.play().catch(e=>console.log(e));
+                
+                repeatTimeout = setTimeout(() => {
+                    shouldSilenceBePlaying = false;
+                    silencePlayer.pause();
+                    audioPlayers[currentPrayer].currentTime = 0;
+                    audioPlayers[currentPrayer].play().catch(e => console.log(e));
+                }, 500); 
+            } else {
+                isPlaying = false;
+                
+                // Crown Transfer
+                shouldSilenceBePlaying = true;
+                silencePlayer.play().catch(e=>console.log(e));
+                
+                if (currentPrayer !== null) {
+                    markAsPlayed(currentPrayer);
+                    document.getElementById('status').innerText = "";
+                    
+                    if (currentPrayer === 0) {
+                        setTimeout(resetState, 1000);
+                    }
+                }
+            }
+        }
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
@@ -311,7 +345,12 @@
                         return new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                                audioData[id] = reader.result;
+                                // Create a dedicated Audio element for this specific track
+                                const player = new Audio();
+                                player.playsInline = true;
+                                player.src = reader.result;
+                                player.addEventListener('ended', onPlayerEnded);
+                                audioPlayers[id] = player;
                                 
                                 const btn = document.getElementById(`btn-${id}`);
                                 if (btn) {
@@ -341,14 +380,9 @@
             });
         });
 
-        const audioPlayer = new Audio();
-        audioPlayer.playsInline = true;
-        
         const silencePlayer = new Audio();
         silencePlayer.loop = true;
         silencePlayer.playsInline = true;
-
-        let silentBlob = null;
 
         function createSilentAudioURL() {
             const sampleRate = 44100;
@@ -368,48 +402,14 @@
             view.setUint16(34, 16, true);
             view.setUint32(36, 0x64617461, false);
             view.setUint32(40, numSamples * 2, true);
-            silentBlob = new Blob([buffer], { type: 'audio/wav' });
-            return URL.createObjectURL(silentBlob);
+            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
         }
 
         silencePlayer.src = createSilentAudioURL();
 
-        // THE UPGRADED AGGRESSIVE LOOP: 0ms Synchronous forced restart
         silencePlayer.addEventListener('pause', () => {
             if (isAppActive && shouldSilenceBePlaying) {
                 silencePlayer.play().catch(e=>console.log(e));
-            }
-        });
-
-        audioPlayer.addEventListener('ended', () => {
-            hasCompletedOnce = true;
-            
-            if (isRepeatOn) {
-                // CROWN TRANSFER: Take over the session during the brief 500ms delay
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e=>console.log(e));
-                
-                repeatTimeout = setTimeout(() => {
-                    shouldSilenceBePlaying = false;
-                    silencePlayer.pause();
-                    audioPlayer.currentTime = 0;
-                    audioPlayer.play().catch(e => console.log(e));
-                }, 500); 
-            } else {
-                isPlaying = false;
-                
-                // CROWN TRANSFER: Prayer ended naturally, hand the headset lock to the silence player
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e=>console.log(e));
-                
-                if (currentPrayer !== null) {
-                    markAsPlayed(currentPrayer);
-                    document.getElementById('status').innerText = "";
-                    
-                    if (currentPrayer === 0) {
-                        setTimeout(resetState, 1000);
-                    }
-                }
             }
         });
 
@@ -437,8 +437,7 @@
 
         function togglePlayPause() {
             if (isPlaying) {
-                // USER PAUSED: Stop prayer, instantly transfer crown to silence
-                audioPlayer.pause();
+                audioPlayers[currentPrayer].pause();
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e=>console.log(e));
                 
@@ -446,11 +445,10 @@
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
             } else {
-                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
-                    // USER RESUMED: Stop silence, instantly transfer crown to prayer
+                if (currentPrayer !== null && audioPlayers[currentPrayer].paused && !audioPlayers[currentPrayer].ended) {
                     shouldSilenceBePlaying = false;
                     silencePlayer.pause();
-                    audioPlayer.play().catch(e=>console.log(e));
+                    audioPlayers[currentPrayer].play().catch(e=>console.log(e));
                     
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
@@ -512,12 +510,14 @@
         }
 
         function resetState() {
-            // Flip the kill switch to completely disable the background session and save battery
             isAppActive = false;
             shouldSilenceBePlaying = false;
             
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
+            // Pause all players
+            Object.values(audioPlayers).forEach(p => {
+                p.pause();
+                p.currentTime = 0;
+            });
             
             silencePlayer.pause(); 
             silencePlayer.currentTime = 0;
@@ -527,8 +527,6 @@
             
             currentPrayer = null;
             isPlaying = false;
-            
-            // Re-arm the Bluetooth wake-up delay
             isFirstPlay = true; 
             
             releaseWakeLock(); 
@@ -567,9 +565,23 @@
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                // Wake up both elements safely
                 shouldSilenceBePlaying = true;
                 silencePlayer.play().catch(e => console.log(e));
+                
+                // MASS UNLOCK: Because the user physically tapped the screen, we have a 1-second 
+                // window where iOS allows us to unlock audio. We rapidly play and pause ALL 11 tracks
+                // at volume 0 to permanently unlock them for background playback.
+                Object.values(audioPlayers).forEach(p => {
+                    p.volume = 0;
+                    let promise = p.play();
+                    if (promise !== undefined) {
+                        promise.then(() => {
+                            p.pause();
+                            p.currentTime = 0;
+                            p.volume = 1;
+                        }).catch(e => console.log(e));
+                    }
+                });
                 
                 document.getElementById('status').innerText = "Waking up audio...";
                 
@@ -584,11 +596,11 @@
         function startPlayback(id) {
             const statusDiv = document.getElementById('status');
 
-            // CROWN TRANSFER: Stop silence, start prayer
             shouldSilenceBePlaying = false;
             silencePlayer.pause();
             
-            audioPlayer.pause();
+            // Pause all other tracks just to be safe
+            Object.values(audioPlayers).forEach(p => p.pause());
             
             if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
                 markAsPlayed(currentPrayer);
@@ -604,10 +616,11 @@
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
-            audioPlayer.src = audioData[id];
-            audioPlayer.currentTime = 0;
+            // NO SRC CHANGE: Simply select the pre-loaded player for this specific track
+            const activePlayer = audioPlayers[id];
+            activePlayer.currentTime = 0;
             
-            let playPromise = audioPlayer.play();
+            let playPromise = activePlayer.play();
             if (playPromise !== undefined) {
                 playPromise.catch((e) => {
                     statusDiv.innerText = "Error: Audio playback failed.";

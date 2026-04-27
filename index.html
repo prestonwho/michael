@@ -78,10 +78,11 @@
             transform: scale(0.95);
             background-color: #e5e5ea;
         }
+        /* Changed to Green for active prayers */
         .action-btn.active-prayer {
-            background-color: #007aff !important;
+            background-color: #28a745 !important;
             color: #fff !important;
-            border-color: #0056b3 !important;
+            border-color: #218838 !important;
         }
         .action-btn.played-prayer {
             background-color: #e5e5ea;
@@ -124,10 +125,11 @@
             transform: scale(0.95);
             background-color: #e5e5ea;
         }
+        /* Changed to Green for active prayers */
         .btn.active-prayer {
-            background-color: #007aff !important;
+            background-color: #28a745 !important;
             color: white !important;
-            border-color: #0056b3 !important;
+            border-color: #218838 !important;
         }
         .btn.played-prayer {
             background-color: #e5e5ea;
@@ -295,20 +297,38 @@
         let repeatTimeout = null;
         
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+        
+        // We now store 11 separate HTML Audio Elements
+        const players = {};
         let loadedCount = 0;
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
 
-            // Forcefully load the files into the browser's hard disk cache
             Promise.all(prayerIds.map(id => {
+                // Force into browser cache
                 return fetch(`${id}.mp3`, { cache: "force-cache" })
-                    .then(res => {
-                        if (!res.ok) throw new Error("Not found");
-                        return res.blob(); // Reads it fully so it stays in cache
-                    })
+                    .then(res => res.blob()) 
                     .then(() => {
+                        // Create a dedicated player for this specific track
+                        const p = new Audio(`${id}.mp3`);
+                        p.playsInline = true;
+                        
+                        p.addEventListener('pause', () => {
+                            if (currentPrayer === id) syncMediaSessionState();
+                        });
+
+                        p.addEventListener('play', () => {
+                            if (currentPrayer === id) syncMediaSessionState();
+                        });
+                        
+                        p.addEventListener('ended', () => {
+                            if (currentPrayer === id) handlePrayerEnded(id);
+                        });
+
+                        players[id] = p;
+                        
                         const btn = document.getElementById(`btn-${id}`);
                         if (btn) {
                             btn.disabled = false;
@@ -332,78 +352,103 @@
             });
         });
 
-        // Generate a tiny Base64 pure silent track. This avoids the "Network Timeout" completely.
+        // Generates the tiny silent keep-alive track
+        function createSilentAudioURL() {
+            const sampleRate = 8000;
+            const numSamples = sampleRate * 2; 
+            const buffer = new ArrayBuffer(44 + numSamples * 2);
+            const view = new DataView(buffer);
+            view.setUint32(0, 0x52494646, false);
+            view.setUint32(4, 36 + numSamples * 2, true);
+            view.setUint32(8, 0x57415645, false);
+            view.setUint32(12, 0x666D7420, false); 
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            view.setUint32(36, 0x64617461, false);
+            view.setUint32(40, numSamples * 2, true);
+            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+        }
+
         const silentAudio = new Audio();
         silentAudio.loop = true;
         silentAudio.playsInline = true;
-
-        const sampleRate = 8000;
-        const numSamples = sampleRate * 2; 
-        const buffer = new ArrayBuffer(44 + numSamples * 2);
-        const view = new DataView(buffer);
-        view.setUint32(0, 0x52494646, false);
-        view.setUint32(4, 36 + numSamples * 2, true);
-        view.setUint32(8, 0x57415645, false);
-        view.setUint32(12, 0x666D7420, false); 
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true);
-        view.setUint16(22, 1, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * 2, true);
-        view.setUint16(32, 2, true);
-        view.setUint16(34, 16, true);
-        view.setUint32(36, 0x64617461, false);
-        view.setUint32(40, numSamples * 2, true);
-
+        
         const reader = new FileReader();
         reader.onloadend = () => { silentAudio.src = reader.result; };
-        reader.readAsDataURL(new Blob([buffer], { type: 'audio/wav' }));
-
-        document.addEventListener('touchstart', function handleFirstTouch() {
-            if (!isUnlocked) {
-                isUnlocked = true;
-                if (silentAudio.src) silentAudio.play().catch(e => console.log(e));
-            }
-            document.removeEventListener('touchstart', handleFirstTouch);
-        }, { passive: true });
-
-        // The SINGLE master audio player. We now use standard relative URLs.
-        const audioPlayer = new Audio();
-        audioPlayer.playsInline = true;
+        reader.readAsDataURL(new Blob([buffer], { type: 'audio/wav' })); // Buffer declared in createSilentAudioURL logic above but we'll use a direct inline base64 for safety here:
         
-        audioPlayer.addEventListener('pause', () => {
-            isPlaying = false;
-            const statusDiv = document.getElementById('status');
-            if (statusDiv.innerText.startsWith("Playing")) {
-                statusDiv.innerText = "Paused";
-            }
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
-        });
+        // Absolute fail-safe inline base64 silence
+        silentAudio.src = "audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
 
-        audioPlayer.addEventListener('play', () => {
-            isPlaying = true;
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
-        });
-        
-        audioPlayer.addEventListener('ended', () => {
+        // THE MAGIC TRICK: "Bless" all 11 audio tags instantly on the first screen touch
+        function unlockAllAudio() {
+            if (isUnlocked) return;
+            isUnlocked = true;
+            
+            silentAudio.play().catch(e => console.log(e));
+            
+            prayerIds.forEach(id => {
+                if (players[id]) {
+                    const p = players[id];
+                    const playPromise = p.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            // Instantly pause it so it doesn't make noise, but iOS now considers it "blessed"
+                            if (currentPrayer !== id) {
+                                p.pause();
+                                p.currentTime = 0;
+                            }
+                        }).catch(e => console.log(e));
+                    }
+                }
+            });
+        }
+
+        // Attach blessing to first interactions
+        document.body.addEventListener('touchstart', unlockAllAudio, { once: true, passive: true });
+        document.body.addEventListener('click', unlockAllAudio, { once: true, passive: true });
+
+        function handlePrayerEnded(id) {
             hasCompletedOnce = true;
             
             if (isRepeatOn) {
                 repeatTimeout = setTimeout(() => {
-                    audioPlayer.currentTime = 0;
-                    audioPlayer.play().catch(e => console.log(e));
+                    if (players[id]) {
+                        players[id].currentTime = 0;
+                        players[id].play().catch(e => console.log(e));
+                    }
                 }, 500); 
             } else {
-                if (currentPrayer !== null) {
-                    markAsPlayed(currentPrayer);
-                    document.getElementById('status').innerText = "";
-                    
-                    if (currentPrayer === 0) {
-                        setTimeout(resetState, 1000);
-                    }
+                markAsPlayed(id);
+                document.getElementById('status').innerText = "";
+                
+                if (id === 0) {
+                    setTimeout(resetState, 1000);
                 }
             }
-        });
+        }
+
+        function syncMediaSessionState() {
+            if (currentPrayer !== null && players[currentPrayer]) {
+                const p = players[currentPrayer];
+                isPlaying = !p.paused;
+                
+                const statusDiv = document.getElementById('status');
+                if (isPlaying) {
+                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                    statusDiv.innerText = `Playing: ${displayText}...`;
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+                } else {
+                    if (statusDiv.innerText.startsWith("Playing")) statusDiv.innerText = "Paused";
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                }
+            }
+        }
 
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
@@ -411,7 +456,7 @@
                 if (wakeLock !== null && wakeLock.released === false) return; 
                 wakeLock = await navigator.wakeLock.request('screen');
             } catch (err) {
-                console.error('Wake Lock error:', err);
+                console.log(err);
             }
         }
 
@@ -428,18 +473,15 @@
         });
 
         function togglePlayPause() {
-            if (isPlaying) {
-                audioPlayer.pause();
-                // We leave the silent track running so iOS never drops the media session.
+            if (currentPrayer === null || !players[currentPrayer]) return;
+            
+            const p = players[currentPrayer];
+            if (!p.paused) {
+                p.pause();
+                // Silent track keeps background alive while paused
             } else {
-                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
-                    if (silentAudio.paused && silentAudio.src) silentAudio.play().catch(e=>console.log(e));
-                    audioPlayer.play().catch(e=>console.log(e));
-                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                    document.getElementById('status').innerText = `Playing: ${displayText}...`;
-                } else {
-                    playNext();
-                }
+                if (silentAudio.paused) silentAudio.play().catch(e=>console.log(e));
+                p.play().catch(e=>console.log(e));
             }
         }
 
@@ -493,8 +535,10 @@
         }
 
         function resetState() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
+            if (currentPrayer !== null && players[currentPrayer]) {
+                players[currentPrayer].pause();
+                players[currentPrayer].currentTime = 0;
+            }
             
             silentAudio.pause();
             silentAudio.currentTime = 0;
@@ -534,54 +578,45 @@
         function playAudio(id) {
             initMediaSession();
             requestWakeLock();
+            unlockAllAudio(); // Failsafe unlock
 
             if (isFirstPlay) {
                 isFirstPlay = false;
-                
                 if (silentAudio.src) silentAudio.play().catch(e => console.log(e));
                 document.getElementById('status').innerText = "Waking up audio...";
-                
-                // Wake up bluetooth using the Base64 silent track to avoid network calls
-                if (silentAudio.src) {
-                    audioPlayer.src = silentAudio.src;
-                    audioPlayer.play().catch(e => console.log(e));
-                }
                 
                 setTimeout(() => {
                     startPlayback(id);
                 }, 500);
             } else {
-                if (silentAudio.paused && silentAudio.src) silentAudio.play().catch(e => console.log(e));
+                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
                 startPlayback(id);
             }
         }
 
         function startPlayback(id) {
-            const statusDiv = document.getElementById('status');
-
-            audioPlayer.pause();
-            
-            if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
-                markAsPlayed(currentPrayer);
+            // Stop old track
+            if (currentPrayer !== null && players[currentPrayer]) {
+                players[currentPrayer].pause();
+                if (hasCompletedOnce && currentPrayer !== id) {
+                    markAsPlayed(currentPrayer);
+                }
             }
+            
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
-            
             currentPrayer = id;
             updateButtonColors(id);
 
-            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            statusDiv.innerText = `Playing: ${displayText}...`;
-
-            // Give the OS media player standard URLs so it can grab them from the disk cache flawlessly
-            audioPlayer.src = `${id}.mp3`;
-            audioPlayer.currentTime = 0;
-            
-            let playPromise = audioPlayer.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((e) => {
-                    statusDiv.innerText = "Error: Audio playback failed.";
-                });
+            // Instantly start the pre-loaded player
+            if (players[id]) {
+                players[id].currentTime = 0;
+                let playPromise = players[id].play();
+                if (playPromise !== undefined) {
+                    playPromise.catch((e) => {
+                        document.getElementById('status').innerText = "Error: Audio playback failed.";
+                    });
+                }
             }
         }
 

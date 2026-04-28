@@ -109,6 +109,7 @@
             justify-self: center;
         }
 
+        /* PLAYING STATE */
         .action-btn.active-prayer, .btn.active-prayer, .action-btn.active-repeat {
             background-color: #007aff !important;
             border-color: #007aff !important;
@@ -116,11 +117,24 @@
             box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
         }
 
-        /* NEW QUEUED STATE (Subtle Indication) */
+        /* PAUSED STATE (Breathing Animation) */
+        @keyframes pause-breath {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        .action-btn.paused-prayer, .btn.paused-prayer {
+            background-color: #007aff !important;
+            border-color: #007aff !important;
+            color: #ffffff !important;
+            animation: pause-breath 2s infinite ease-in-out;
+        }
+
+        /* QUEUED STATE */
         .action-btn.queued-prayer, .btn.queued-prayer {
             border-color: #007aff !important;
-            background-color: #e5f1ff !important; /* Very faint blue */
-            box-shadow: 0 0 0 1px #007aff !important; /* Crisp outline */
+            background-color: #e5f1ff !important; 
+            box-shadow: 0 0 0 1px #007aff !important; 
         }
 
         .keypad-container {
@@ -293,14 +307,12 @@
                     audioPlayer.pause();
                     isPlaying = false;
                     
-                    // Determine what is logically next
                     let nextId = null;
                     if (currentPrayer === 'opening') nextId = 1;
                     else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) nextId = currentPrayer + 1;
                     else if (currentPrayer === 9) nextId = 0;
                     
-                    // Remove active color, apply queued color to the next button
-                    updateButtonColors(null, nextId);
+                    updateButtonColors(null, nextId, false);
                     
                     if (currentPrayer === 0) {
                         document.getElementById('status').innerText = "Chaplet Complete.";
@@ -333,16 +345,21 @@
             }
         });
 
-        function updateButtonColors(activeId, queuedId = null) {
+        function updateButtonColors(activeId, queuedId = null, paused = false) {
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
                 if (btn.id !== 'btn-stop' && btn.id !== 'btn-repeat') {
-                    btn.classList.remove('active-prayer');
-                    btn.classList.remove('queued-prayer');
+                    btn.classList.remove('active-prayer', 'queued-prayer', 'paused-prayer');
                 }
             });
             if (activeId !== null) {
                 const btn = document.getElementById(`btn-${activeId}`);
-                if (btn) btn.classList.add('active-prayer');
+                if (btn) {
+                    if (paused) {
+                        btn.classList.add('paused-prayer');
+                    } else {
+                        btn.classList.add('active-prayer');
+                    }
+                }
             }
             if (queuedId !== null) {
                 const btn = document.getElementById(`btn-${queuedId}`);
@@ -356,107 +373,4 @@
                 return;
             }
             let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            document.getElementById('status').innerText = `Playing: ${displayText}...`;
-        }
-
-        function toggleRepeat() {
-            isRepeatOn = !isRepeatOn;
-            const btn = document.getElementById('btn-repeat');
-            if (isRepeatOn) {
-                btn.innerText = "Repeat: On";
-                btn.classList.add('active-repeat');
-            } else {
-                btn.innerText = "Repeat: Off";
-                btn.classList.remove('active-repeat');
-            }
-        }
-
-        function stopState() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            
-            currentPrayer = null;
-            isPlaying = false;
-            
-            releaseWakeLock(); 
-            updateButtonColors(null);
-            
-            document.getElementById('status').innerText = "Stopped.";
-            setTimeout(() => { if (document.getElementById('status').innerText === "Stopped.") document.getElementById('status').innerText = ""; }, 2000);
-        }
-
-        function playNext() {
-            if (currentPrayer === null) {
-                playAudio('opening');
-            } else if (currentPrayer === 'opening') {
-                playAudio(1);
-            } else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) {
-                playAudio(currentPrayer + 1);
-            } else if (currentPrayer === 9) {
-                playAudio(0);
-            }
-        }
-
-        function playAudio(id) {
-            requestWakeLock();
-
-            if (currentPrayer === id) {
-                if (audioPlayer.currentTime >= spriteMap[id].end) {
-                    audioPlayer.currentTime = spriteMap[id].start;
-                    audioPlayer.play().then(() => {
-                        isPlaying = true;
-                        updateButtonColors(id);
-                        updateStatusText(id, true);
-                    }).catch(e => {
-                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
-                    });
-                } else if (audioPlayer.paused) {
-                    audioPlayer.play().then(() => {
-                        isPlaying = true;
-                        updateButtonColors(id);
-                        updateStatusText(id, true);
-                    }).catch(e => {
-                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
-                    });
-                } else {
-                    audioPlayer.pause();
-                    isPlaying = false;
-                    updateStatusText(id, false);
-                }
-                return; 
-            }
-
-            currentPrayer = id;
-            updateButtonColors(id); // passing just the active ID automatically clears the queued styling
-            updateStatusText(id, true);
-            
-            if (!audioUnlocked) {
-                audioUnlocked = true;
-                
-                audioPlayer.muted = true;
-                let playPromise = audioPlayer.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        audioPlayer.currentTime = spriteMap[id].start;
-                        audioPlayer.muted = false; 
-                        isPlaying = true;
-                    }).catch((e) => {
-                        document.getElementById('status').innerText = "Error: Please tap again.";
-                        audioUnlocked = false; 
-                        isPlaying = false;
-                    });
-                }
-            } else {
-                audioPlayer.currentTime = spriteMap[id].start;
-                audioPlayer.play().then(() => {
-                    isPlaying = true;
-                }).catch((e) => {
-                    document.getElementById('status').innerText = "Tap to play (iOS constraint).";
-                    isPlaying = false;
-                });
-            }
-        }
-    </script>
-</body>
-</html>
+            document.getElement

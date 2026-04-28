@@ -113,6 +113,13 @@
             box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
         }
 
+        /* STOP BUTTON INSTANT FEEDBACK */
+        #btn-stop:active, .flash-blue {
+            background-color: #007aff !important;
+            border-color: #007aff !important;
+            color: #ffffff !important;
+        }
+
         /* PAUSED STATE (Breathing Animation) */
         @keyframes pause-breath {
             0% { opacity: 1; }
@@ -228,9 +235,9 @@
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" style="flex-grow: 1; margin-right: 15px;">Opening</button>
-            <button id="btn-stop" class="action-btn" onclick="stopState()" style="color: #d9534f; min-width: 64px;" aria-label="Stop">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>
+            <button id="btn-stop" class="action-btn" onclick="stopState()" style="min-width: 64px;" aria-label="Stop">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="4" y="4" width="16" height="16" rx="3" ry="3"></rect>
                 </svg>
             </button>
         </div>
@@ -391,6 +398,13 @@
         }
 
         function stopState() {
+            // Flash the button blue for 200ms
+            const stopBtn = document.getElementById('btn-stop');
+            if (stopBtn) {
+                stopBtn.classList.add('flash-blue');
+                setTimeout(() => stopBtn.classList.remove('flash-blue'), 200);
+            }
+
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             

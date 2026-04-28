@@ -9,7 +9,6 @@
     
     <title>St. Michael Chaplet</title>
     <link rel="apple-touch-icon" href="icon.png">
-    <link rel="manifest" href="manifest.json">
     
     <style>
         * {
@@ -25,10 +24,7 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            background-color: #eef2f9;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0px, transparent 60%),
-                radial-gradient(at 100% 100%, rgba(162, 0, 255, 0.08) 0px, transparent 60%);
+            background-color: #f0f0f5;
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -50,11 +46,10 @@
             color: #333;
             margin-bottom: 20px;
             text-align: center;
-            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
         }
         
         button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
             pointer-events: none;
         }
@@ -66,75 +61,34 @@
             max-width: 300px;
             margin-bottom: 20px;
         }
-
-        .action-btn, .btn, .nav-btn {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.65);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        .action-btn:active:not(:disabled), .btn:active:not(:disabled), .nav-btn:active:not(:disabled) {
-            transform: scale(0.94);
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
-        }
-
         .action-btn {
+            background-color: #fff;
+            border: 1px solid #007aff;
             border-radius: 20px;
             padding: 10px 15px;
             font-size: 14px;
             font-weight: bold;
             color: #007aff;
             cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+        .action-btn:active:not(:disabled) {
+            transform: scale(0.95);
+            background-color: #e5e5ea;
+        }
+        .action-btn.active-prayer {
+            background-color: #007aff !important;
+            color: #fff !important;
+            border-color: #0056b3 !important;
+        }
+        .action-btn.played-prayer {
+            background-color: #e5e5ea;
+            color: #8e8e93;
+            border-color: #d1d1d6;
         }
         
-        .btn {
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            font-size: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #007aff;
-            justify-self: center;
-        }
-
-        .nav-btn {
-            border-radius: 20px;
-            width: 80px;
-            padding: 10px 0;
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
-            background: rgba(0, 122, 255, 0.7) !important;
-            border-color: rgba(255, 255, 255, 0.4) !important;
-            color: white !important;
-            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-
-        .action-btn.played-prayer, .btn.played-prayer {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.25);
-            color: #999;
-            box-shadow: none;
-        }
-
         .keypad-container {
             display: flex;
             flex-direction: column;
@@ -149,7 +103,38 @@
             gap: 15px;
             width: 100%;
         }
-
+        .btn {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: #007aff;
+            justify-self: center;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+        .btn:active:not(:disabled) {
+            transform: scale(0.95);
+            background-color: #e5e5ea;
+        }
+        .btn.active-prayer {
+            background-color: #007aff !important;
+            color: white !important;
+            border-color: #0056b3 !important;
+        }
+        .btn.played-prayer {
+            background-color: #e5e5ea;
+            color: #8e8e93;
+            border-color: #d1d1d6;
+        }
+        
         .bottom-nav {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -163,12 +148,39 @@
         }
         .prev-container { justify-self: start; }
         .next-container { justify-self: end; }
+        
+        .nav-btn {
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            width: 80px;
+            padding: 10px 0;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .nav-btn:active:not(:disabled) {
+            transform: scale(0.95);
+            background-color: #e2e6ea;
+        }
+        .nav-btn.active-repeat {
+            background-color: #007aff !important;
+            color: white !important;
+            border-color: #0056b3 !important;
+        }
 
         .subtitle {
             font-size: 14px;
             color: #666;
             text-align: center;
-            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
         #status {
@@ -178,9 +190,9 @@
             font-weight: bold;
             text-align: center;
             font-size: 14px;
-            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
+        /* Landscape Orientation - Split View */
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
@@ -215,9 +227,11 @@
             .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
+            /* Make keypad 1-9 much bigger */
             .btn { width: 85px; height: 85px; font-size: 36px; }
             .keypad { gap: 15px; }
             
+            /* Adjust the bottom 3 buttons */
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
             .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
@@ -236,7 +250,7 @@
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;" disabled>Reset</button>
+            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;" disabled>Reset</button>
         </div>
 
         <div class="keypad-container">
@@ -268,14 +282,6 @@
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => console.log('Offline storage activated'))
-                    .catch(error => console.log('Offline storage failed: ', error));
-            });
-        }
-
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -289,56 +295,11 @@
         let wakeLock = null; 
         let repeatTimeout = null;
         
-        let isAppActive = false;
-        let shouldSilenceBePlaying = false;
-        
         const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+        
+        // This stores the raw MP3 data directly in memory as Base64 strings
         const audioData = {};
         let loadedCount = 0;
-
-        // THE DJ DOUBLE-BUFFER: Two players so we can crossfade without dropping the iOS Audio Session
-        const player1 = new Audio();
-        player1.playsInline = true;
-        player1.addEventListener('ended', onPlayerEnded);
-
-        const player2 = new Audio();
-        player2.playsInline = true;
-        player2.addEventListener('ended', onPlayerEnded);
-
-        let activeAudioPlayer = player1;
-        
-        function onPlayerEnded(e) {
-            // Ignore events from the inactive buffer
-            if (e.target !== activeAudioPlayer) return;
-
-            hasCompletedOnce = true;
-            
-            if (isRepeatOn) {
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e=>console.log(e));
-                
-                repeatTimeout = setTimeout(() => {
-                    shouldSilenceBePlaying = false;
-                    silencePlayer.pause();
-                    activeAudioPlayer.currentTime = 0;
-                    activeAudioPlayer.play().catch(e => console.log(e));
-                }, 500); 
-            } else {
-                isPlaying = false;
-                
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e=>console.log(e));
-                
-                if (currentPrayer !== null) {
-                    markAsPlayed(currentPrayer);
-                    document.getElementById('status').innerText = "";
-                    
-                    if (currentPrayer === 0) {
-                        setTimeout(resetState, 1000);
-                    }
-                }
-            }
-        }
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
@@ -354,6 +315,7 @@
                         return new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => {
+                                // Save the exact file data as pure text in memory
                                 audioData[id] = reader.result;
                                 
                                 const btn = document.getElementById(`btn-${id}`);
@@ -384,9 +346,36 @@
             });
         });
 
-        const silencePlayer = new Audio();
-        silencePlayer.loop = true;
-        silencePlayer.playsInline = true;
+        // The single master audio player
+        const audioPlayer = new Audio();
+        audioPlayer.playsInline = true;
+        
+        audioPlayer.addEventListener('ended', () => {
+            hasCompletedOnce = true;
+            
+            if (isRepeatOn) {
+                repeatTimeout = setTimeout(() => {
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play().catch(e => console.log(e));
+                }, 500); 
+            } else {
+                isPlaying = false;
+                if (currentPrayer !== null) {
+                    markAsPlayed(currentPrayer);
+                    document.getElementById('status').innerText = "";
+                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+                    
+                    if (currentPrayer === 0) {
+                        setTimeout(resetState, 1000);
+                    }
+                }
+            }
+        });
+
+        // Background media lock handler
+        const silentAudio = new Audio();
+        silentAudio.loop = true;
+        silentAudio.playsInline = true;
 
         function createSilentAudioURL() {
             const sampleRate = 44100;
@@ -409,13 +398,7 @@
             return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
         }
 
-        silencePlayer.src = createSilentAudioURL();
-
-        silencePlayer.addEventListener('pause', () => {
-            if (isAppActive && shouldSilenceBePlaying) {
-                silencePlayer.play().catch(e=>console.log(e));
-            }
-        });
+        silentAudio.src = createSilentAudioURL();
 
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
@@ -441,19 +424,14 @@
 
         function togglePlayPause() {
             if (isPlaying) {
-                activeAudioPlayer.pause();
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e=>console.log(e));
-                
+                audioPlayer.pause();
                 isPlaying = false;
                 clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
-                if (currentPrayer !== null && activeAudioPlayer.paused && !activeAudioPlayer.ended) {
-                    shouldSilenceBePlaying = false;
-                    silencePlayer.pause();
-                    activeAudioPlayer.play().catch(e=>console.log(e));
-                    
+                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
+                    audioPlayer.play().catch(e=>console.log(e));
                     isPlaying = true;
                     let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
                     document.getElementById('status').innerText = `Playing: ${displayText}...`;
@@ -472,10 +450,16 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
+                    // Completely synchronous background execution
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
+
+                silentAudio.addEventListener('pause', () => {
+                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
+                });
+
                 mediaSessionInitialized = true;
             }
         }
@@ -514,24 +498,13 @@
         }
 
         function resetState() {
-            isAppActive = false;
-            shouldSilenceBePlaying = false;
-            
-            player1.pause();
-            player1.currentTime = 0;
-            player2.pause();
-            player2.currentTime = 0;
-            
-            silencePlayer.pause(); 
-            silencePlayer.currentTime = 0;
-            
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
             clearTimeout(repeatTimeout);
             hasCompletedOnce = false;
             
             currentPrayer = null;
             isPlaying = false;
-            isFirstPlay = true; 
-            
             releaseWakeLock(); 
             
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
@@ -559,24 +532,22 @@
         }
 
         function playAudio(id) {
-            isAppActive = true;
             initMediaSession();
             requestWakeLock();
-
-            updateButtonColors(id);
 
             if (isFirstPlay) {
                 isFirstPlay = false;
                 
-                shouldSilenceBePlaying = true;
-                silencePlayer.play().catch(e => console.log(e));
+                // Wake up bluetooth
+                silentAudio.play().catch(e => console.log(e));
                 
                 document.getElementById('status').innerText = "Waking up audio...";
                 
                 setTimeout(() => {
                     startPlayback(id);
-                }, 750);
+                }, 500);
             } else {
+                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
                 startPlayback(id);
             }
         }
@@ -584,9 +555,7 @@
         function startPlayback(id) {
             const statusDiv = document.getElementById('status');
 
-            // Force silence player to hold the audio line so iOS doesn't suspend us during the switch
-            shouldSilenceBePlaying = true;
-            silencePlayer.play().catch(e=>console.log(e));
+            audioPlayer.pause();
             
             if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
                 markAsPlayed(currentPrayer);
@@ -597,32 +566,21 @@
             currentPrayer = id;
             updateButtonColors(id);
 
-            let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
             statusDiv.innerText = `Playing: ${displayText}...`;
             isPlaying = true;
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
 
-            // PREPARE THE NEXT BUFFER (DJ Turntable approach)
-            let nextPlayer = (activeAudioPlayer === player1) ? player2 : player1;
-            nextPlayer.src = audioData[id];
-            nextPlayer.currentTime = 0;
+            // Inject the raw base64 data into the active player
+            audioPlayer.src = audioData[id];
+            audioPlayer.currentTime = 0;
             
-            let playPromise = nextPlayer.play();
+            let playPromise = audioPlayer.play();
             if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    // NEW AUDIO HAS SUCCESSFULLY STARTED. We can safely drop the old tracks.
-                    shouldSilenceBePlaying = false;
-                    silencePlayer.pause();
-                    
-                    activeAudioPlayer.pause();
-                    activeAudioPlayer = nextPlayer; // Officially swap the active tracker
-                }).catch((e) => {
+                playPromise.catch((e) => {
                     statusDiv.innerText = "Error: Audio playback failed.";
                     isPlaying = false;
                 });
-            } else {
-                // Fallback for older devices
-                activeAudioPlayer = nextPlayer;
             }
         }
 

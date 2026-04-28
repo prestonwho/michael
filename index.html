@@ -25,7 +25,7 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            background-color: #f2f2f7; /* Classic clean iOS gray */
+            background-color: #f2f2f7;
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -116,11 +116,11 @@
             box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
         }
 
-        .action-btn.played-prayer, .btn.played-prayer {
-            background-color: #e5e5ea;
-            border-color: #d1d1d6;
-            color: #8e8e93;
-            box-shadow: none;
+        /* NEW QUEUED STATE (Subtle Indication) */
+        .action-btn.queued-prayer, .btn.queued-prayer {
+            border-color: #007aff !important;
+            background-color: #e5f1ff !important; /* Very faint blue */
+            box-shadow: 0 0 0 1px #007aff !important; /* Crisp outline */
         }
 
         .keypad-container {
@@ -145,8 +145,8 @@
             color: white;
             border: none;
             border-radius: 26px; 
-            padding: 50px 0; /* Doubled height */
-            font-size: 28px; /* Slightly larger text */
+            padding: 50px 0; 
+            font-size: 28px; 
             font-weight: 800;
             letter-spacing: 1.5px;
             text-transform: uppercase;
@@ -198,7 +198,7 @@
             .giant-btn {
                 grid-area: nextbtn;
                 margin: 0;
-                padding: 35px 0; /* Scaled up for landscape as well */
+                padding: 35px 0; 
             }
             
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
@@ -221,7 +221,7 @@
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;">Reset</button>
+            <button id="btn-stop" class="action-btn" onclick="stopState()" style="color: #d9534f;">Stop</button>
         </div>
 
         <div class="keypad-container">
@@ -292,12 +292,22 @@
                 } else {
                     audioPlayer.pause();
                     isPlaying = false;
-                    markAsPlayed(currentPrayer);
-                    document.getElementById('status').innerText = "Ready for Next";
+                    
+                    // Determine what is logically next
+                    let nextId = null;
+                    if (currentPrayer === 'opening') nextId = 1;
+                    else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) nextId = currentPrayer + 1;
+                    else if (currentPrayer === 9) nextId = 0;
+                    
+                    // Remove active color, apply queued color to the next button
+                    updateButtonColors(null, nextId);
                     
                     if (currentPrayer === 0) {
                         document.getElementById('status').innerText = "Chaplet Complete.";
-                        setTimeout(resetState, 1500);
+                        setTimeout(stopState, 1500);
+                    } else {
+                        let nextName = nextId === 0 ? "Closing Prayers" : `Salutation ${nextId}`;
+                        document.getElementById('status').innerText = `Up Next: ${nextName}`;
                     }
                 }
             }
@@ -323,28 +333,30 @@
             }
         });
 
-        function updateButtonColors(activeId) {
+        function updateButtonColors(activeId, queuedId = null) {
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                // Ensure the Reset and Repeat buttons don't lose their specific stylings
-                if (btn.id !== 'btn-reset' && btn.id !== 'btn-repeat') {
+                if (btn.id !== 'btn-stop' && btn.id !== 'btn-repeat') {
                     btn.classList.remove('active-prayer');
+                    btn.classList.remove('queued-prayer');
                 }
             });
             if (activeId !== null) {
                 const btn = document.getElementById(`btn-${activeId}`);
-                if (btn) {
-                    btn.classList.remove('played-prayer');
-                    btn.classList.add('active-prayer');
-                }
+                if (btn) btn.classList.add('active-prayer');
+            }
+            if (queuedId !== null) {
+                const btn = document.getElementById(`btn-${queuedId}`);
+                if (btn) btn.classList.add('queued-prayer');
             }
         }
 
-        function markAsPlayed(id) {
-            const btn = document.getElementById(`btn-${id}`);
-            if (btn) {
-                btn.classList.remove('active-prayer');
-                btn.classList.add('played-prayer');
+        function updateStatusText(id, playing) {
+            if (!playing) {
+                document.getElementById('status').innerText = "Paused";
+                return;
             }
+            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            document.getElementById('status').innerText = `Playing: ${displayText}...`;
         }
 
         function toggleRepeat() {
@@ -359,7 +371,7 @@
             }
         }
 
-        function resetState() {
+        function stopState() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             
@@ -367,15 +379,10 @@
             isPlaying = false;
             
             releaseWakeLock(); 
+            updateButtonColors(null);
             
-            document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset' && btn.id !== 'btn-repeat') {
-                    btn.classList.remove('active-prayer');
-                    btn.classList.remove('played-prayer');
-                }
-            });
-            document.getElementById('status').innerText = "Reset complete.";
-            setTimeout(() => { if (document.getElementById('status').innerText === "Reset complete.") document.getElementById('status').innerText = ""; }, 2000);
+            document.getElementById('status').innerText = "Stopped.";
+            setTimeout(() => { if (document.getElementById('status').innerText === "Stopped.") document.getElementById('status').innerText = ""; }, 2000);
         }
 
         function playNext() {
@@ -393,15 +400,35 @@
         function playAudio(id) {
             requestWakeLock();
 
-            if (currentPrayer !== null && currentPrayer !== id) {
-                markAsPlayed(currentPrayer);
+            if (currentPrayer === id) {
+                if (audioPlayer.currentTime >= spriteMap[id].end) {
+                    audioPlayer.currentTime = spriteMap[id].start;
+                    audioPlayer.play().then(() => {
+                        isPlaying = true;
+                        updateButtonColors(id);
+                        updateStatusText(id, true);
+                    }).catch(e => {
+                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
+                    });
+                } else if (audioPlayer.paused) {
+                    audioPlayer.play().then(() => {
+                        isPlaying = true;
+                        updateButtonColors(id);
+                        updateStatusText(id, true);
+                    }).catch(e => {
+                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
+                    });
+                } else {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    updateStatusText(id, false);
+                }
+                return; 
             }
 
             currentPrayer = id;
-            updateButtonColors(id);
-
-            let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            document.getElementById('status').innerText = `Playing: ${displayText}...`;
+            updateButtonColors(id); // passing just the active ID automatically clears the queued styling
+            updateStatusText(id, true);
             
             if (!audioUnlocked) {
                 audioUnlocked = true;

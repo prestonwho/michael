@@ -43,13 +43,6 @@
             padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 28px;
-        }
-
         .header-buttons, .footer-buttons {
             display: flex;
             justify-content: space-between;
@@ -93,6 +86,9 @@
             font-weight: bold;
             color: #007aff;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
         }
         
@@ -185,9 +181,8 @@
             .app-container {
                 display: grid;
                 grid-template-columns: auto auto;
-                grid-template-rows: auto auto auto auto auto;
+                grid-template-rows: auto auto auto auto;
                 grid-template-areas: 
-                    "title    keypad"
                     "headers  keypad"
                     "footers  keypad"
                     "nextbtn  keypad"
@@ -198,7 +193,6 @@
                 row-gap: 12px;
             }
             
-            h1 { grid-area: title; margin: 0; text-align: center; }
             .header-buttons { grid-area: headers; margin: 0; justify-content: center; gap: 20px; }
             .keypad-container { grid-area: keypad; }
             
@@ -231,11 +225,14 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
-            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
-            <button id="btn-stop" class="action-btn" onclick="stopState()" style="color: #d9534f;">Stop</button>
+            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" style="flex-grow: 1; margin-right: 15px;">Opening</button>
+            <button id="btn-stop" class="action-btn" onclick="stopState()" style="color: #d9534f; min-width: 64px;" aria-label="Stop">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>
+                </svg>
+            </button>
         </div>
 
         <div class="keypad-container">
@@ -253,8 +250,15 @@
         </div>
         
         <div class="footer-buttons">
-            <button id="btn-repeat" class="action-btn" onclick="toggleRepeat()">Repeat: Off</button>
-            <button id="btn-0" class="action-btn" onclick="playAudio(0)">Closing Prayers</button>
+            <button id="btn-repeat" class="action-btn" onclick="toggleRepeat()" style="min-width: 64px; margin-right: 15px;" aria-label="Repeat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 2l4 4-4 4"></path>
+                    <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+                    <path d="M7 22l-4-4 4-4"></path>
+                    <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+                </svg>
+            </button>
+            <button id="btn-0" class="action-btn" onclick="playAudio(0)" style="flex-grow: 1;">Closing</button>
         </div>
         
         <button id="btn-next" class="giant-btn" onclick="playNext()">Play Next</button>
@@ -318,7 +322,7 @@
                         document.getElementById('status').innerText = "Chaplet Complete.";
                         setTimeout(stopState, 1500);
                     } else {
-                        let nextName = nextId === 0 ? "Closing Prayers" : `Salutation ${nextId}`;
+                        let nextName = nextId === 0 ? "Closing" : `Salutation ${nextId}`;
                         document.getElementById('status').innerText = `Up Next: ${nextName}`;
                     }
                 }
@@ -372,7 +376,7 @@
                 document.getElementById('status').innerText = "Paused";
                 return;
             }
-            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            let displayText = id === 'opening' ? 'Opening' : (id === 0 ? 'Closing' : `Salutation ${id}`);
             document.getElementById('status').innerText = `Playing: ${displayText}...`;
         }
 
@@ -380,10 +384,8 @@
             isRepeatOn = !isRepeatOn;
             const btn = document.getElementById('btn-repeat');
             if (isRepeatOn) {
-                btn.innerText = "Repeat: On";
                 btn.classList.add('active-repeat');
             } else {
-                btn.innerText = "Repeat: Off";
                 btn.classList.remove('active-repeat');
             }
         }

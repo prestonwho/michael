@@ -9,6 +9,7 @@
     
     <title>St. Michael Chaplet</title>
     <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     
     <style>
         * {
@@ -24,7 +25,10 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            background-color: #f0f0f5;
+            background-color: #eef2f9;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0px, transparent 60%),
+                radial-gradient(at 100% 100%, rgba(162, 0, 255, 0.08) 0px, transparent 60%);
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -46,10 +50,11 @@
             color: #333;
             margin-bottom: 20px;
             text-align: center;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
         }
         
         button:disabled {
-            opacity: 0.4;
+            opacity: 0.5;
             cursor: not-allowed;
             pointer-events: none;
         }
@@ -61,34 +66,75 @@
             max-width: 300px;
             margin-bottom: 20px;
         }
+
+        .action-btn, .btn, .nav-btn {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .action-btn:active:not(:disabled), .btn:active:not(:disabled), .nav-btn:active:not(:disabled) {
+            transform: scale(0.94);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+        }
+
         .action-btn {
-            background-color: #fff;
-            border: 1px solid #007aff;
             border-radius: 20px;
             padding: 10px 15px;
             font-size: 14px;
             font-weight: bold;
             color: #007aff;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s;
-        }
-        .action-btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e5e5ea;
-        }
-        .action-btn.active-prayer {
-            background-color: #007aff !important;
-            color: #fff !important;
-            border-color: #0056b3 !important;
-        }
-        .action-btn.played-prayer {
-            background-color: #e5e5ea;
-            color: #8e8e93;
-            border-color: #d1d1d6;
         }
         
+        .btn {
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #007aff;
+            justify-self: center;
+        }
+
+        .nav-btn {
+            border-radius: 20px;
+            width: 80px;
+            padding: 10px 0;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
+            background: rgba(0, 122, 255, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+            color: white !important;
+            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .action-btn.played-prayer, .btn.played-prayer {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #999;
+            box-shadow: none;
+        }
+
         .keypad-container {
             display: flex;
             flex-direction: column;
@@ -103,38 +149,7 @@
             gap: 15px;
             width: 100%;
         }
-        .btn {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            font-size: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            color: #007aff;
-            justify-self: center;
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s;
-        }
-        .btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e5e5ea;
-        }
-        .btn.active-prayer {
-            background-color: #007aff !important;
-            color: white !important;
-            border-color: #0056b3 !important;
-        }
-        .btn.played-prayer {
-            background-color: #e5e5ea;
-            color: #8e8e93;
-            border-color: #d1d1d6;
-        }
-        
+
         .bottom-nav {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -148,39 +163,12 @@
         }
         .prev-container { justify-self: start; }
         .next-container { justify-self: end; }
-        
-        .nav-btn {
-            background-color: #f8f9fa;
-            border: 1px solid #ccc;
-            border-radius: 20px;
-            width: 80px;
-            padding: 10px 0;
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            -webkit-tap-highlight-color: transparent;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .nav-btn:active:not(:disabled) {
-            transform: scale(0.95);
-            background-color: #e2e6ea;
-        }
-        .nav-btn.active-repeat {
-            background-color: #007aff !important;
-            color: white !important;
-            border-color: #0056b3 !important;
-        }
 
         .subtitle {
             font-size: 14px;
             color: #666;
             text-align: center;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
         #status {
@@ -190,9 +178,9 @@
             font-weight: bold;
             text-align: center;
             font-size: 14px;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
-        /* Landscape Orientation - Split View */
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
@@ -227,11 +215,9 @@
             .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
-            /* Make keypad 1-9 much bigger */
             .btn { width: 85px; height: 85px; font-size: 36px; }
             .keypad { gap: 15px; }
             
-            /* Adjust the bottom 3 buttons */
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
             .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
@@ -250,20 +236,20 @@
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f; border-color: #d9534f;" disabled>Reset</button>
+            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;" disabled>Reset</button>
         </div>
 
         <div class="keypad-container">
             <div class="keypad">
-                <button id="btn-1" class="btn" onclick="playAudio(1)" disabled data-text="1"></button>
-                <button id="btn-2" class="btn" onclick="playAudio(2)" disabled data-text="2"></button>
-                <button id="btn-3" class="btn" onclick="playAudio(3)" disabled data-text="3"></button>
-                <button id="btn-4" class="btn" onclick="playAudio(4)" disabled data-text="4"></button>
-                <button id="btn-5" class="btn" onclick="playAudio(5)" disabled data-text="5"></button>
-                <button id="btn-6" class="btn" onclick="playAudio(6)" disabled data-text="6"></button>
-                <button id="btn-7" class="btn" onclick="playAudio(7)" disabled data-text="7"></button>
-                <button id="btn-8" class="btn" onclick="playAudio(8)" disabled data-text="8"></button>
-                <button id="btn-9" class="btn" onclick="playAudio(9)" disabled data-text="9"></button>
+                <button id="btn-1" class="btn" onclick="playAudio(1)" disabled>1</button>
+                <button id="btn-2" class="btn" onclick="playAudio(2)" disabled>2</button>
+                <button id="btn-3" class="btn" onclick="playAudio(3)" disabled>3</button>
+                <button id="btn-4" class="btn" onclick="playAudio(4)" disabled>4</button>
+                <button id="btn-5" class="btn" onclick="playAudio(5)" disabled>5</button>
+                <button id="btn-6" class="btn" onclick="playAudio(6)" disabled>6</button>
+                <button id="btn-7" class="btn" onclick="playAudio(7)" disabled>7</button>
+                <button id="btn-8" class="btn" onclick="playAudio(8)" disabled>8</button>
+                <button id="btn-9" class="btn" onclick="playAudio(9)" disabled>9</button>
             </div>
         </div>
         
@@ -271,7 +257,7 @@
             <div class="prev-container">
                 <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()" disabled>Repeat<br>Off</button>
             </div>
-            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled data-text="0"></button>
+            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled>0</button>
             <div class="next-container">
                 <button id="btn-next" class="nav-btn" onclick="playNext()" disabled>Play<br>Next</button>
             </div>
@@ -282,88 +268,80 @@
     </div>
 
     <script>
-        document.addEventListener('touchmove', function(e) {
-            e.preventDefault();
-        }, { passive: false });
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Forcing an update of the service worker so it grabs the new m4a file
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        registration.update();
+                        console.log('Offline storage activated');
+                    })
+                    .catch(error => console.log('Offline storage failed: ', error));
+            });
+        }
+
+        // AUDIO SPRITE TIMESTAMPS
+        const spriteMap = {
+            'opening': { start: 0, end: 8.5 },
+            1: { start: 9, end: 13.5 },
+            2: { start: 14, end: 19.5 },
+            3: { start: 20, end: 25.5 },
+            4: { start: 26, end: 31.5 },
+            5: { start: 32, end: 36.5 },
+            6: { start: 37, end: 41.5 },
+            7: { start: 42, end: 46.5 },
+            8: { start: 47, end: 52.5 },
+            9: { start: 53, end: 58.5 },
+            0: { start: 59, end: 87 }
+        };
 
         let currentPrayer = null;
         let isPlaying = false;
         let isRepeatOn = false;
         let mediaSessionInitialized = false;
-        let isFirstPlay = true;
-        let hasCompletedOnce = false;
         let wakeLock = null; 
-        let repeatTimeout = null;
         
-        const prayerIds = ['opening', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        
-        // This stores the raw MP3 data directly in memory as Base64 strings
-        const audioData = {};
-        let loadedCount = 0;
+        // SINGLE MASTER AUDIO PLAYER
+        const audioPlayer = new Audio();
+        audioPlayer.playsInline = true;
+        audioPlayer.src = 'chaplet.m4a'; 
         
         window.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
-            statusDiv.innerText = `Loading audio... 0/${prayerIds.length}`;
+            statusDiv.innerText = "Loading audio sprite...";
+            
+            audioPlayer.load();
 
-            Promise.all(prayerIds.map(id => {
-                return fetch(`${id}.mp3`)
-                    .then(res => {
-                        if (!res.ok) throw new Error("Not found");
-                        return res.blob();
-                    })
-                    .then(blob => {
-                        return new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                                // Save the exact file data as pure text in memory
-                                audioData[id] = reader.result;
-                                
-                                const btn = document.getElementById(`btn-${id}`);
-                                if (btn) {
-                                    btn.disabled = false;
-                                    if (btn.dataset.text) btn.innerText = btn.dataset.text;
-                                }
-                                
-                                loadedCount++;
-                                if (loadedCount === prayerIds.length) {
-                                    statusDiv.innerText = "Ready.";
-                                    setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
-                                    
-                                    document.getElementById('btn-reset').disabled = false;
-                                    document.getElementById('btn-repeat').disabled = false;
-                                    document.getElementById('btn-next').disabled = false;
-                                } else {
-                                    statusDiv.innerText = `Loading audio... ${loadedCount}/${prayerIds.length}`;
-                                }
-                                resolve();
-                            };
-                            reader.onerror = reject;
-                            reader.readAsDataURL(blob);
-                        });
-                    });
-            })).catch(e => {
-                document.getElementById('status').innerText = "Error loading audio files. Please refresh.";
-            });
+            // Unlock UI once the audio is ready to play
+            audioPlayer.addEventListener('canplay', () => {
+                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                statusDiv.innerText = "Ready.";
+                setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
+            }, { once: true });
+
+            // Fallback unlock if event doesn't fire fast enough
+            setTimeout(() => {
+                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                if (statusDiv.innerText === "Loading audio sprite...") statusDiv.innerText = "";
+            }, 3000);
         });
 
-        // The single master audio player
-        const audioPlayer = new Audio();
-        audioPlayer.playsInline = true;
-        
-        audioPlayer.addEventListener('ended', () => {
-            hasCompletedOnce = true;
+        // THE WATCHER: Monitors the time and stops it when it hits the 'end' timestamp
+        audioPlayer.addEventListener('timeupdate', () => {
+            if (currentPrayer === null || audioPlayer.paused) return;
             
-            if (isRepeatOn) {
-                repeatTimeout = setTimeout(() => {
-                    audioPlayer.currentTime = 0;
-                    audioPlayer.play().catch(e => console.log(e));
-                }, 500); 
-            } else {
-                isPlaying = false;
-                if (currentPrayer !== null) {
+            const endTime = spriteMap[currentPrayer].end;
+            
+            if (audioPlayer.currentTime >= endTime) {
+                if (isRepeatOn) {
+                    // Instantly rewind to start of current prayer
+                    audioPlayer.currentTime = spriteMap[currentPrayer].start;
+                } else {
+                    // Prayer finished
+                    audioPlayer.pause();
+                    isPlaying = false;
                     markAsPlayed(currentPrayer);
                     document.getElementById('status').innerText = "";
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
                     
                     if (currentPrayer === 0) {
                         setTimeout(resetState, 1000);
@@ -371,34 +349,6 @@
                 }
             }
         });
-
-        // Background media lock handler
-        const silentAudio = new Audio();
-        silentAudio.loop = true;
-        silentAudio.playsInline = true;
-
-        function createSilentAudioURL() {
-            const sampleRate = 44100;
-            const numSamples = sampleRate * 5; 
-            const buffer = new ArrayBuffer(44 + numSamples * 2);
-            const view = new DataView(buffer);
-            view.setUint32(0, 0x52494646, false);
-            view.setUint32(4, 36 + numSamples * 2, true);
-            view.setUint32(8, 0x57415645, false);
-            view.setUint32(12, 0x666D7420, false); 
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            view.setUint32(36, 0x64617461, false);
-            view.setUint32(40, numSamples * 2, true);
-            return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
-        }
-
-        silentAudio.src = createSilentAudioURL();
 
         async function requestWakeLock() {
             if (!('wakeLock' in navigator)) return; 
@@ -426,16 +376,19 @@
             if (isPlaying) {
                 audioPlayer.pause();
                 isPlaying = false;
-                clearTimeout(repeatTimeout);
                 document.getElementById('status').innerText = "Paused";
-                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
-                if (currentPrayer !== null && audioPlayer.paused && !audioPlayer.ended) {
-                    audioPlayer.play().catch(e=>console.log(e));
-                    isPlaying = true;
-                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                    document.getElementById('status').innerText = `Playing: ${displayText}...`;
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+                if (currentPrayer !== null && audioPlayer.paused) {
+                    // Only resume if we haven't hit the end boundary
+                    if (audioPlayer.currentTime < spriteMap[currentPrayer].end) {
+                        audioPlayer.play().catch(e => console.log(e));
+                        isPlaying = true;
+                        let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
+                        document.getElementById('status').innerText = `Playing: ${displayText}...`;
+                        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+                    } else {
+                        playNext();
+                    }
                 } else {
                     playNext();
                 }
@@ -450,16 +403,10 @@
                         artist: 'Tap to Pause / Double-Tap for Next'
                     });
 
-                    // Completely synchronous background execution
                     navigator.mediaSession.setActionHandler('play', togglePlayPause);
                     navigator.mediaSession.setActionHandler('pause', togglePlayPause);
                     navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
                 }
-
-                silentAudio.addEventListener('pause', () => {
-                    setTimeout(() => { silentAudio.play().catch(e=>console.log(e)); }, 50);
-                });
-
                 mediaSessionInitialized = true;
             }
         }
@@ -468,131 +415,4 @@
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
                 if (btn.id !== 'btn-reset') btn.classList.remove('active-prayer');
             });
-            if (activeId !== null) {
-                const btn = document.getElementById(`btn-${activeId}`);
-                if (btn) {
-                    btn.classList.remove('played-prayer');
-                    btn.classList.add('active-prayer');
-                }
-            }
-        }
-
-        function markAsPlayed(id) {
-            const btn = document.getElementById(`btn-${id}`);
-            if (btn) {
-                btn.classList.remove('active-prayer');
-                btn.classList.add('played-prayer');
-            }
-        }
-
-        function toggleRepeat() {
-            isRepeatOn = !isRepeatOn;
-            const btn = document.getElementById('btn-repeat');
-            if (isRepeatOn) {
-                btn.innerHTML = "Repeat<br>On";
-                btn.classList.add('active-repeat');
-            } else {
-                btn.innerHTML = "Repeat<br>Off";
-                btn.classList.remove('active-repeat');
-            }
-        }
-
-        function resetState() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            clearTimeout(repeatTimeout);
-            hasCompletedOnce = false;
-            
-            currentPrayer = null;
-            isPlaying = false;
-            releaseWakeLock(); 
-            
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
-            
-            document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') {
-                    btn.classList.remove('active-prayer');
-                    btn.classList.remove('played-prayer');
-                }
-            });
-            document.getElementById('status').innerText = "Reset complete.";
-            setTimeout(() => { document.getElementById('status').innerText = ""; }, 2000);
-        }
-
-        function playNext() {
-            if (currentPrayer === null) {
-                playAudio('opening');
-            } else if (currentPrayer === 'opening') {
-                playAudio(1);
-            } else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) {
-                playAudio(currentPrayer + 1);
-            } else if (currentPrayer === 9) {
-                playAudio(0);
-            }
-        }
-
-        function playAudio(id) {
-            initMediaSession();
-            requestWakeLock();
-
-            if (isFirstPlay) {
-                isFirstPlay = false;
-                
-                // Wake up bluetooth
-                silentAudio.play().catch(e => console.log(e));
-                
-                document.getElementById('status').innerText = "Waking up audio...";
-                
-                setTimeout(() => {
-                    startPlayback(id);
-                }, 500);
-            } else {
-                if (silentAudio.paused) silentAudio.play().catch(e => console.log(e));
-                startPlayback(id);
-            }
-        }
-
-        function startPlayback(id) {
-            const statusDiv = document.getElementById('status');
-
-            audioPlayer.pause();
-            
-            if (hasCompletedOnce && currentPrayer !== null && currentPrayer !== id) {
-                markAsPlayed(currentPrayer);
-            }
-            clearTimeout(repeatTimeout);
-            hasCompletedOnce = false;
-            
-            currentPrayer = id;
-            updateButtonColors(id);
-
-            let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            statusDiv.innerText = `Playing: ${displayText}...`;
-            isPlaying = true;
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
-
-            // Inject the raw base64 data into the active player
-            audioPlayer.src = audioData[id];
-            audioPlayer.currentTime = 0;
-            
-            let playPromise = audioPlayer.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((e) => {
-                    statusDiv.innerText = "Error: Audio playback failed.";
-                    isPlaying = false;
-                });
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'MediaPlayPause' || e.code === 'Space') {
-                e.preventDefault();
-                togglePlayPause();
-            } else if (e.code === 'MediaTrackNext') {
-                e.preventDefault();
-                playNext();
-            }
-        });
-    </script>
-</body>
-</html>
+            if (activeId

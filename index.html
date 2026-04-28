@@ -25,10 +25,7 @@
             height: 100vh;
             margin: 0;
             padding: 0;
-            background-color: #eef2f9;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.12) 0px, transparent 60%),
-                radial-gradient(at 100% 100%, rgba(162, 0, 255, 0.08) 0px, transparent 60%);
+            background-color: #f2f2f7; /* Classic clean iOS gray */
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -50,7 +47,7 @@
             color: #333;
             margin-bottom: 20px;
             text-align: center;
-            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+            font-size: 28px;
         }
 
         .header-buttons {
@@ -62,19 +59,20 @@
         }
 
         .action-btn, .btn, .nav-btn {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.65);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+            background-color: #ffffff;
+            border: 1px solid #d1d1d6;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: all 0.2s ease;
         }
 
-        .action-btn:active, .btn:active, .nav-btn:active {
+        .action-btn:active, .btn:active, .nav-btn:active, .giant-btn:active {
             transform: scale(0.94);
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .action-btn:active, .btn:active, .nav-btn:active {
+            background-color: #e5e5ea;
         }
 
         .action-btn {
@@ -101,13 +99,14 @@
 
         .nav-btn {
             border-radius: 20px;
-            width: 80px;
+            width: 100%;
+            height: 100%;
             padding: 10px 0;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
             color: #333;
             cursor: pointer;
-            line-height: 1.2;
+            line-height: 1.3;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -115,17 +114,16 @@
         }
 
         .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
-            background: rgba(0, 122, 255, 0.7) !important;
-            border-color: rgba(255, 255, 255, 0.4) !important;
-            color: white !important;
-            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            background-color: #007aff !important;
+            border-color: #007aff !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
         }
 
         .action-btn.played-prayer, .btn.played-prayer {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.25);
-            color: #999;
+            background-color: #e5e5ea;
+            border-color: #d1d1d6;
+            color: #8e8e93;
             box-shadow: none;
         }
 
@@ -144,47 +142,59 @@
             width: 100%;
         }
 
-        .bottom-nav {
+        .sub-keypad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             width: 100%;
             max-width: 300px;
+            margin-top: 15px;
+            margin-bottom: 20px;
             align-items: center;
             justify-items: center;
-            margin-top: 15px;
-            margin-bottom: 25px;
         }
-        .prev-container { justify-self: start; }
-        .next-container { justify-self: end; }
 
-        .subtitle {
-            font-size: 14px;
-            color: #666;
-            text-align: center;
-            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+        .giant-btn {
+            width: 100%;
+            max-width: 300px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 20px 0;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .giant-btn:active {
+            background-color: #005bb5;
         }
 
         #status {
-            margin-top: 10px;
+            margin-top: 15px;
             height: 20px;
             color: #d9534f;
             font-weight: bold;
             text-align: center;
-            font-size: 14px;
-            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+            font-size: 15px;
         }
 
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
                 grid-template-columns: auto auto;
-                grid-template-rows: auto auto auto auto auto;
+                grid-template-rows: auto auto auto auto auto auto;
                 grid-template-areas: 
                     "title    keypad"
                     "headers  keypad"
-                    "botnav   keypad"
-                    "subtitle keypad"
+                    "subkey   keypad"
+                    "nextbtn  keypad"
                     "status   keypad";
                 justify-content: center;
                 align-content: center;
@@ -196,27 +206,26 @@
             .header-buttons { grid-area: headers; margin: 0; justify-content: center; gap: 20px; }
             .keypad-container { grid-area: keypad; }
             
-            .bottom-nav { 
-                grid-area: botnav; 
-                display: flex; 
-                flex-direction: row; 
-                justify-content: center;
-                gap: 15px;
+            .sub-keypad { 
+                grid-area: subkey; 
                 margin: 0; 
                 max-width: none;
             }
+
+            .giant-btn {
+                grid-area: nextbtn;
+                margin: 0;
+                padding: 15px 0;
+            }
             
-            .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
-            .btn { width: 85px; height: 85px; font-size: 36px; }
-            .keypad { gap: 15px; }
-            
+            .btn { width: 75px; height: 75px; font-size: 32px; }
+            .keypad { gap: 10px; }
             .btn-zero { width: 60px; height: 60px; font-size: 26px; }
-            .nav-btn { width: 75px; padding: 8px 0; font-size: 13px; }
 
             @media (max-height: 400px) {
-                .btn { width: 75px; height: 75px; font-size: 32px; }
+                .btn { width: 65px; height: 65px; font-size: 28px; }
                 .keypad { gap: 10px; }
                 column-gap: 40px;
             }
@@ -226,7 +235,7 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet...</h1>
+        <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
@@ -247,17 +256,14 @@
             </div>
         </div>
         
-        <div class="bottom-nav">
-            <div class="prev-container">
-                <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
-            </div>
+        <div class="sub-keypad">
+            <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
             <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
-            <div class="next-container">
-                <button id="btn-next" class="nav-btn" onclick="playNext()">Play<br>Next</button>
-            </div>
+            <div></div> <!-- Empty slot to align 0 perfectly under 8 -->
         </div>
         
-        <div class="subtitle">1-9: Salutations | 0: Closing Prayers</div>
+        <button id="btn-next" class="giant-btn" onclick="playNext()">Play Next</button>
+        
         <div id="status"></div>
     </div>
 
@@ -287,33 +293,11 @@
         let currentPrayer = null;
         let isPlaying = false;
         let isRepeatOn = false;
-        let mediaSessionInitialized = false;
         let wakeLock = null; 
-        let audioUnlocked = false; 
         
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
         audioPlayer.src = 'chaplet.m4a'; 
-
-        // Helper function to find the next prayer logically
-        function getNextPrayerId(id) {
-            if (id === 'opening') return 1;
-            if (typeof id === 'number' && id >= 1 && id < 9) return id + 1;
-            if (id === 9) return 0;
-            return null;
-        }
-
-        // Update the Lock Screen text
-        function updateMediaSession(id, state) {
-            if ('mediaSession' in navigator) {
-                let title = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: title,
-                    artist: 'St. Michael Chaplet'
-                });
-                navigator.mediaSession.playbackState = state;
-            }
-        }
 
         audioPlayer.addEventListener('timeupdate', () => {
             if (currentPrayer === null || audioPlayer.paused) return;
@@ -324,28 +308,14 @@
                 if (isRepeatOn) {
                     audioPlayer.currentTime = spriteMap[currentPrayer].start;
                 } else {
-                    // PRAYER FINISHED - NATIVE QUEUEING LOGIC
                     audioPlayer.pause();
                     isPlaying = false;
                     markAsPlayed(currentPrayer);
+                    document.getElementById('status').innerText = "Ready for Next";
                     
-                    const nextId = getNextPrayerId(currentPrayer);
-                    
-                    if (nextId !== null) {
-                        // FAST FORWARD TO THE NEXT PRAYER AND PARK IT
-                        currentPrayer = nextId;
-                        audioPlayer.currentTime = spriteMap[nextId].start;
-                        
-                        updateButtonColors(nextId);
-                        updateMediaSession(nextId, "paused");
-                        
-                        let nextText = nextId === 0 ? 'Closing Prayers' : `Salutation ${nextId}`;
-                        document.getElementById('status').innerText = `Queued: ${nextText} (Press Play)`;
-                    } else {
-                        // It was the last prayer
+                    if (currentPrayer === 0) {
                         document.getElementById('status').innerText = "Chaplet Complete.";
-                        updateMediaSession(currentPrayer, "none");
-                        setTimeout(resetState, 1000);
+                        setTimeout(resetState, 1500);
                     }
                 }
             }
@@ -370,39 +340,6 @@
                 await requestWakeLock();
             }
         });
-
-        function togglePlayPause() {
-            if (isPlaying) {
-                audioPlayer.pause();
-                isPlaying = false;
-                updateMediaSession(currentPrayer, "paused");
-                document.getElementById('status').innerText = "Paused";
-            } else {
-                if (currentPrayer !== null) {
-                    // Because we already parked it at the start of the next track,
-                    // hitting "Play" just smoothly starts the audio from right where it sits!
-                    audioPlayer.play().catch(e => console.log(e));
-                    isPlaying = true;
-                    
-                    let displayText = currentPrayer === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${currentPrayer}`);
-                    document.getElementById('status').innerText = `Playing: ${displayText}...`;
-                    updateMediaSession(currentPrayer, "playing");
-                } else {
-                    playNext();
-                }
-            }
-        }
-
-        function initMediaSession() {
-            if (!mediaSessionInitialized) {
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.setActionHandler('play', togglePlayPause);
-                    navigator.mediaSession.setActionHandler('pause', togglePlayPause);
-                    navigator.mediaSession.setActionHandler('nexttrack', playNext);
-                }
-                mediaSessionInitialized = true;
-            }
-        }
 
         function updateButtonColors(activeId) {
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
@@ -441,81 +378,4 @@
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             
-            currentPrayer = null;
-            isPlaying = false;
-            
-            releaseWakeLock(); 
-            
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
-            
-            document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') {
-                    btn.classList.remove('active-prayer');
-                    btn.classList.remove('played-prayer');
-                }
-            });
-            document.getElementById('status').innerText = "Reset complete.";
-            setTimeout(() => { document.getElementById('status').innerText = ""; }, 2000);
-        }
-
-        function playNext() {
-            let nextId = currentPrayer === null ? 'opening' : getNextPrayerId(currentPrayer);
-            if (nextId !== null) {
-                playAudio(nextId);
-            }
-        }
-
-        function playAudio(id) {
-            initMediaSession();
-            requestWakeLock();
-
-            if (currentPrayer !== null && currentPrayer !== id) {
-                markAsPlayed(currentPrayer);
-            }
-
-            currentPrayer = id;
-            updateButtonColors(id);
-
-            let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            document.getElementById('status').innerText = `Playing: ${displayText}...`;
-            isPlaying = true;
-            
-            updateMediaSession(id, "playing");
-
-            if (!audioUnlocked) {
-                audioUnlocked = true;
-                
-                audioPlayer.muted = true;
-                let playPromise = audioPlayer.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        audioPlayer.currentTime = spriteMap[id].start;
-                        audioPlayer.muted = false; 
-                    }).catch((e) => {
-                        document.getElementById('status').innerText = "Error: Please tap again.";
-                        audioUnlocked = false; 
-                        isPlaying = false;
-                    });
-                }
-            } else {
-                audioPlayer.currentTime = spriteMap[id].start;
-                audioPlayer.play().catch((e) => {
-                    document.getElementById('status').innerText = "Error: Audio playback failed.";
-                    isPlaying = false;
-                });
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'MediaPlayPause' || e.code === 'Space') {
-                e.preventDefault();
-                togglePlayPause();
-            } else if (e.code === 'MediaTrackNext') {
-                e.preventDefault();
-                playNext();
-            }
-        });
-    </script>
-</body>
-</html>
+            cur

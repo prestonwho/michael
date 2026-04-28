@@ -373,4 +373,108 @@
                 return;
             }
             let displayText = id === 'opening' ? 'Opening Prayer' : (id === 0 ? 'Closing Prayers' : `Salutation ${id}`);
-            document.getElement
+            document.getElementById('status').innerText = `Playing: ${displayText}...`;
+        }
+
+        function toggleRepeat() {
+            isRepeatOn = !isRepeatOn;
+            const btn = document.getElementById('btn-repeat');
+            if (isRepeatOn) {
+                btn.innerText = "Repeat: On";
+                btn.classList.add('active-repeat');
+            } else {
+                btn.innerText = "Repeat: Off";
+                btn.classList.remove('active-repeat');
+            }
+        }
+
+        function stopState() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            
+            currentPrayer = null;
+            isPlaying = false;
+            
+            releaseWakeLock(); 
+            updateButtonColors(null);
+            
+            document.getElementById('status').innerText = "Stopped.";
+            setTimeout(() => { if (document.getElementById('status').innerText === "Stopped.") document.getElementById('status').innerText = ""; }, 2000);
+        }
+
+        function playNext() {
+            if (currentPrayer === null) {
+                playAudio('opening');
+            } else if (currentPrayer === 'opening') {
+                playAudio(1);
+            } else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) {
+                playAudio(currentPrayer + 1);
+            } else if (currentPrayer === 9) {
+                playAudio(0);
+            }
+        }
+
+        function playAudio(id) {
+            requestWakeLock();
+
+            if (currentPrayer === id) {
+                if (audioPlayer.currentTime >= spriteMap[id].end) {
+                    audioPlayer.currentTime = spriteMap[id].start;
+                    audioPlayer.play().then(() => {
+                        isPlaying = true;
+                        updateButtonColors(id, null, false);
+                        updateStatusText(id, true);
+                    }).catch(e => {
+                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
+                    });
+                } else if (audioPlayer.paused) {
+                    audioPlayer.play().then(() => {
+                        isPlaying = true;
+                        updateButtonColors(id, null, false);
+                        updateStatusText(id, true);
+                    }).catch(e => {
+                        document.getElementById('status').innerText = "Tap to play (iOS constraint).";
+                    });
+                } else {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    updateButtonColors(id, null, true);
+                    updateStatusText(id, false);
+                }
+                return; 
+            }
+
+            currentPrayer = id;
+            updateButtonColors(id, null, false); 
+            updateStatusText(id, true);
+            
+            if (!audioUnlocked) {
+                audioUnlocked = true;
+                
+                audioPlayer.muted = true;
+                let playPromise = audioPlayer.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        audioPlayer.currentTime = spriteMap[id].start;
+                        audioPlayer.muted = false; 
+                        isPlaying = true;
+                    }).catch((e) => {
+                        document.getElementById('status').innerText = "Error: Please tap again.";
+                        audioUnlocked = false; 
+                        isPlaying = false;
+                    });
+                }
+            } else {
+                audioPlayer.currentTime = spriteMap[id].start;
+                audioPlayer.play().then(() => {
+                    isPlaying = true;
+                }).catch((e) => {
+                    document.getElementById('status').innerText = "Tap to play (iOS constraint).";
+                    isPlaying = false;
+                });
+            }
+        }
+    </script>
+</body>
+</html>

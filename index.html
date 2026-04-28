@@ -294,6 +294,7 @@
         let isPlaying = false;
         let isRepeatOn = false;
         let wakeLock = null; 
+        let audioUnlocked = false; 
         
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
@@ -342,40 +343,4 @@
         });
 
         function updateButtonColors(activeId) {
-            document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') btn.classList.remove('active-prayer');
-            });
-            if (activeId !== null) {
-                const btn = document.getElementById(`btn-${activeId}`);
-                if (btn) {
-                    btn.classList.remove('played-prayer');
-                    btn.classList.add('active-prayer');
-                }
-            }
-        }
-
-        function markAsPlayed(id) {
-            const btn = document.getElementById(`btn-${id}`);
-            if (btn) {
-                btn.classList.remove('active-prayer');
-                btn.classList.add('played-prayer');
-            }
-        }
-
-        function toggleRepeat() {
-            isRepeatOn = !isRepeatOn;
-            const btn = document.getElementById('btn-repeat');
-            if (isRepeatOn) {
-                btn.innerHTML = "Repeat<br>On";
-                btn.classList.add('active-repeat');
-            } else {
-                btn.innerHTML = "Repeat<br>Off";
-                btn.classList.remove('active-repeat');
-            }
-        }
-
-        function resetState() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            
-            cur
+            document.querySelectorAll('.btn, .action-bt

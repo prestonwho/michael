@@ -52,12 +52,6 @@
             text-align: center;
             text-shadow: 0 1px 2px rgba(255,255,255,0.5);
         }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
 
         .header-buttons {
             display: flex;
@@ -77,7 +71,7 @@
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        .action-btn:active:not(:disabled), .btn:active:not(:disabled), .nav-btn:active:not(:disabled) {
+        .action-btn:active, .btn:active, .nav-btn:active {
             transform: scale(0.94);
             background: rgba(255, 255, 255, 0.6);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8);
@@ -235,31 +229,31 @@
         <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
-            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')" disabled>Opening Prayer</button>
-            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;" disabled>Reset</button>
+            <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
+            <button id="btn-reset" class="action-btn" onclick="resetState()" style="color: #d9534f;">Reset</button>
         </div>
 
         <div class="keypad-container">
             <div class="keypad">
-                <button id="btn-1" class="btn" onclick="playAudio(1)" disabled>1</button>
-                <button id="btn-2" class="btn" onclick="playAudio(2)" disabled>2</button>
-                <button id="btn-3" class="btn" onclick="playAudio(3)" disabled>3</button>
-                <button id="btn-4" class="btn" onclick="playAudio(4)" disabled>4</button>
-                <button id="btn-5" class="btn" onclick="playAudio(5)" disabled>5</button>
-                <button id="btn-6" class="btn" onclick="playAudio(6)" disabled>6</button>
-                <button id="btn-7" class="btn" onclick="playAudio(7)" disabled>7</button>
-                <button id="btn-8" class="btn" onclick="playAudio(8)" disabled>8</button>
-                <button id="btn-9" class="btn" onclick="playAudio(9)" disabled>9</button>
+                <button id="btn-1" class="btn" onclick="playAudio(1)">1</button>
+                <button id="btn-2" class="btn" onclick="playAudio(2)">2</button>
+                <button id="btn-3" class="btn" onclick="playAudio(3)">3</button>
+                <button id="btn-4" class="btn" onclick="playAudio(4)">4</button>
+                <button id="btn-5" class="btn" onclick="playAudio(5)">5</button>
+                <button id="btn-6" class="btn" onclick="playAudio(6)">6</button>
+                <button id="btn-7" class="btn" onclick="playAudio(7)">7</button>
+                <button id="btn-8" class="btn" onclick="playAudio(8)">8</button>
+                <button id="btn-9" class="btn" onclick="playAudio(9)">9</button>
             </div>
         </div>
         
         <div class="bottom-nav">
             <div class="prev-container">
-                <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()" disabled>Repeat<br>Off</button>
+                <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
             </div>
-            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)" disabled>0</button>
+            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
             <div class="next-container">
-                <button id="btn-next" class="nav-btn" onclick="playNext()" disabled>Play<br>Next</button>
+                <button id="btn-next" class="nav-btn" onclick="playNext()">Play<br>Next</button>
             </div>
         </div>
         
@@ -270,29 +264,26 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Forcing an update of the service worker so it grabs the new m4a file
                 navigator.serviceWorker.register('sw.js')
                     .then(registration => {
                         registration.update();
-                        console.log('Offline storage activated');
                     })
                     .catch(error => console.log('Offline storage failed: ', error));
             });
         }
 
-        // AUDIO SPRITE TIMESTAMPS
         const spriteMap = {
-            'opening': { start: 0, end: 8.5 },
-            1: { start: 9, end: 13.5 },
-            2: { start: 14, end: 19.5 },
-            3: { start: 20, end: 25.5 },
-            4: { start: 26, end: 31.5 },
-            5: { start: 32, end: 36.5 },
-            6: { start: 37, end: 41.5 },
-            7: { start: 42, end: 46.5 },
-            8: { start: 47, end: 52.5 },
-            9: { start: 53, end: 58.5 },
-            0: { start: 59, end: 87 }
+            'opening': { start: 0, end: 16.5 },
+            1: { start: 17, end: 27.0 },
+            2: { start: 27.5, end: 39.0 },
+            3: { start: 39.5, end: 50.5 },
+            4: { start: 51, end: 62.5 },
+            5: { start: 63, end: 72.5 },
+            6: { start: 73, end: 82.5 },
+            7: { start: 83, end: 93.0 },
+            8: { start: 93.5, end: 106.0 },
+            9: { start: 106.5, end: 118.5 },
+            0: { start: 119, end: 180.5 }
         };
 
         let currentPrayer = null;
@@ -301,32 +292,14 @@
         let mediaSessionInitialized = false;
         let wakeLock = null; 
         
-        // SINGLE MASTER AUDIO PLAYER
+        // NEW FLAG to prevent iOS from crashing when we change timestamps
+        let audioUnlocked = false; 
+        
         const audioPlayer = new Audio();
         audioPlayer.playsInline = true;
         audioPlayer.src = 'chaplet.m4a'; 
-        
-        window.addEventListener('DOMContentLoaded', () => {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "Loading audio sprite...";
-            
-            audioPlayer.load();
 
-            // Unlock UI once the audio is ready to play
-            audioPlayer.addEventListener('canplay', () => {
-                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-                statusDiv.innerText = "Ready.";
-                setTimeout(() => { if (statusDiv.innerText === "Ready.") statusDiv.innerText = ""; }, 2000);
-            }, { once: true });
-
-            // Fallback unlock if event doesn't fire fast enough
-            setTimeout(() => {
-                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-                if (statusDiv.innerText === "Loading audio sprite...") statusDiv.innerText = "";
-            }, 3000);
-        });
-
-        // THE WATCHER: Monitors the time and stops it when it hits the 'end' timestamp
+        // Monitor time to auto-pause
         audioPlayer.addEventListener('timeupdate', () => {
             if (currentPrayer === null || audioPlayer.paused) return;
             
@@ -334,10 +307,8 @@
             
             if (audioPlayer.currentTime >= endTime) {
                 if (isRepeatOn) {
-                    // Instantly rewind to start of current prayer
                     audioPlayer.currentTime = spriteMap[currentPrayer].start;
                 } else {
-                    // Prayer finished
                     audioPlayer.pause();
                     isPlaying = false;
                     markAsPlayed(currentPrayer);
@@ -355,9 +326,7 @@
             try {
                 if (wakeLock !== null && wakeLock.released === false) return; 
                 wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) {
-                console.error('Wake Lock error:', err);
-            }
+            } catch (err) { }
         }
 
         function releaseWakeLock() {
@@ -379,7 +348,6 @@
                 document.getElementById('status').innerText = "Paused";
             } else {
                 if (currentPrayer !== null && audioPlayer.paused) {
-                    // Only resume if we haven't hit the end boundary
                     if (audioPlayer.currentTime < spriteMap[currentPrayer].end) {
                         audioPlayer.play().catch(e => console.log(e));
                         isPlaying = true;
@@ -415,4 +383,121 @@
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
                 if (btn.id !== 'btn-reset') btn.classList.remove('active-prayer');
             });
-            if (activeId
+            if (activeId !== null) {
+                const btn = document.getElementById(`btn-${activeId}`);
+                if (btn) {
+                    btn.classList.remove('played-prayer');
+                    btn.classList.add('active-prayer');
+                }
+            }
+        }
+
+        function markAsPlayed(id) {
+            const btn = document.getElementById(`btn-${id}`);
+            if (btn) {
+                btn.classList.remove('active-prayer');
+                btn.classList.add('played-prayer');
+            }
+        }
+
+        function toggleRepeat() {
+            isRepeatOn = !isRepeatOn;
+            const btn = document.getElementById('btn-repeat');
+            if (isRepeatOn) {
+                btn.innerHTML = "Repeat<br>On";
+                btn.classList.add('active-repeat');
+            } else {
+                btn.innerHTML = "Repeat<br>Off";
+                btn.classList.remove('active-repeat');
+            }
+        }
+
+        function resetState() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            
+            currentPrayer = null;
+            isPlaying = false;
+            
+            releaseWakeLock(); 
+            
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "none";
+            
+            document.querySelectorAll('.btn, .action-btn').forEach(btn => {
+                if (btn.id !== 'btn-reset') {
+                    btn.classList.remove('active-prayer');
+                    btn.classList.remove('played-prayer');
+                }
+            });
+            document.getElementById('status').innerText = "Reset complete.";
+            setTimeout(() => { document.getElementById('status').innerText = ""; }, 2000);
+        }
+
+        function playNext() {
+            if (currentPrayer === null) {
+                playAudio('opening');
+            } else if (currentPrayer === 'opening') {
+                playAudio(1);
+            } else if (typeof currentPrayer === 'number' && currentPrayer >= 1 && currentPrayer < 9) {
+                playAudio(currentPrayer + 1);
+            } else if (currentPrayer === 9) {
+                playAudio(0);
+            }
+        }
+
+        function playAudio(id) {
+            initMediaSession();
+            requestWakeLock();
+
+            if (currentPrayer !== null && currentPrayer !== id) {
+                markAsPlayed(currentPrayer);
+            }
+
+            currentPrayer = id;
+            updateButtonColors(id);
+
+            let displayText = id === 'opening' ? 'Opening Prayer' : (currentPrayer === 0 ? 'Closing Prayers' : `Salutation ${id}`);
+            document.getElementById('status').innerText = `Playing: ${displayText}...`;
+            isPlaying = true;
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+
+            // BULLETPROOF iOS UNLOCK SEQUENCE
+            if (!audioUnlocked) {
+                audioUnlocked = true;
+                // Mute it so you don't hear a blip of the opening prayer
+                audioPlayer.muted = true;
+                let playPromise = audioPlayer.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Once iOS authorizes playback, we can safely jump to the timestamp
+                        audioPlayer.currentTime = spriteMap[id].start;
+                        audioPlayer.muted = false; // Unmute it
+                    }).catch((e) => {
+                        document.getElementById('status').innerText = "Error: Please tap again.";
+                        audioUnlocked = false; // Reset so they can try again
+                        isPlaying = false;
+                    });
+                }
+            } else {
+                // If it's already unlocked, just jump and play normally
+                audioPlayer.currentTime = spriteMap[id].start;
+                audioPlayer.play().catch((e) => {
+                    document.getElementById('status').innerText = "Error: Audio playback failed.";
+                    isPlaying = false;
+                });
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'MediaPlayPause' || e.code === 'Space') {
+                e.preventDefault();
+                togglePlayPause();
+            } else if (e.code === 'MediaTrackNext') {
+                e.preventDefault();
+                playNext();
+            }
+        });
+    </script>
+</body>
+</html>

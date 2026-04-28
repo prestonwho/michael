@@ -50,38 +50,50 @@
             font-size: 28px;
         }
 
-        .header-buttons {
+        .header-buttons, .footer-buttons {
             display: flex;
             justify-content: space-between;
             width: 100%;
             max-width: 300px;
+        }
+
+        .header-buttons {
             margin-bottom: 20px;
         }
 
-        .action-btn, .btn, .nav-btn {
-            background-color: #ffffff;
-            border: 1px solid #d1d1d6;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        .footer-buttons {
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .action-btn, .btn, .giant-btn {
             -webkit-tap-highlight-color: transparent;
             transition: all 0.2s ease;
         }
 
-        .action-btn:active, .btn:active, .nav-btn:active, .giant-btn:active {
+        .action-btn:active, .btn:active, .giant-btn:active {
             transform: scale(0.94);
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
+
+        .action-btn, .btn {
+            background-color: #ffffff;
+            border: 1px solid #d1d1d6;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
         
-        .action-btn:active, .btn:active, .nav-btn:active {
+        .action-btn:active, .btn:active {
             background-color: #e5e5ea;
         }
 
         .action-btn {
             border-radius: 20px;
-            padding: 10px 15px;
+            padding: 12px 15px; /* Slightly taller padding to make them pop */
             font-size: 14px;
             font-weight: bold;
             color: #007aff;
             cursor: pointer;
+            text-align: center;
         }
         
         .btn {
@@ -97,23 +109,7 @@
             justify-self: center;
         }
 
-        .nav-btn {
-            border-radius: 20px;
-            width: 100%;
-            height: 100%;
-            padding: 10px 0;
-            font-size: 14px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            line-height: 1.3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .action-btn.active-prayer, .btn.active-prayer, .nav-btn.active-repeat {
+        .action-btn.active-prayer, .btn.active-prayer, .action-btn.active-repeat {
             background-color: #007aff !important;
             border-color: #007aff !important;
             color: #ffffff !important;
@@ -142,34 +138,20 @@
             width: 100%;
         }
 
-        .sub-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            width: 100%;
-            max-width: 300px;
-            margin-top: 15px;
-            margin-bottom: 20px;
-            align-items: center;
-            justify-items: center;
-        }
-
         .giant-btn {
             width: 100%;
-            max-width: 300px;
+            max-width: 340px; /* slightly wider */
             background-color: #007aff;
             color: white;
             border: none;
-            border-radius: 20px;
-            padding: 20px 0;
-            font-size: 22px;
+            border-radius: 26px; /* rounder */
+            padding: 26px 0; /* much taller */
+            font-size: 26px; /* bigger font */
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+            box-shadow: 0 6px 15px rgba(0, 122, 255, 0.35);
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s ease;
         }
 
         .giant-btn:active {
@@ -185,6 +167,14 @@
             font-size: 15px;
         }
 
+        .subtitle {
+            font-size: 13px;
+            color: #8e8e93;
+            text-align: center;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
         @media screen and (orientation: landscape) {
             .app-container {
                 display: grid;
@@ -193,36 +183,38 @@
                 grid-template-areas: 
                     "title    keypad"
                     "headers  keypad"
-                    "subkey   keypad"
+                    "footers  keypad"
                     "nextbtn  keypad"
+                    "subtitle keypad"
                     "status   keypad";
                 justify-content: center;
                 align-content: center;
                 column-gap: 60px; 
-                row-gap: 15px;
+                row-gap: 12px;
             }
             
             h1 { grid-area: title; margin: 0; text-align: center; }
             .header-buttons { grid-area: headers; margin: 0; justify-content: center; gap: 20px; }
             .keypad-container { grid-area: keypad; }
             
-            .sub-keypad { 
-                grid-area: subkey; 
+            .footer-buttons { 
+                grid-area: footers; 
                 margin: 0; 
-                max-width: none;
+                justify-content: center; 
+                gap: 20px;
             }
 
             .giant-btn {
                 grid-area: nextbtn;
                 margin: 0;
-                padding: 15px 0;
+                padding: 20px 0; /* scale back down slightly for landscape */
             }
             
+            .subtitle { grid-area: subtitle; margin: 0; text-align: center; }
             #status { grid-area: status; margin: 0; text-align: center; height: 20px; }
             
             .btn { width: 75px; height: 75px; font-size: 32px; }
             .keypad { gap: 10px; }
-            .btn-zero { width: 60px; height: 60px; font-size: 26px; }
 
             @media (max-height: 400px) {
                 .btn { width: 65px; height: 65px; font-size: 28px; }
@@ -235,7 +227,7 @@
 <body>
 
     <div class="app-container">
-        <h1>St. Michael Chaplet.</h1>
+        <h1>St. Michael Chaplet</h1>
         
         <div class="header-buttons">
             <button id="btn-opening" class="action-btn" onclick="playAudio('opening')">Opening Prayer</button>
@@ -256,14 +248,14 @@
             </div>
         </div>
         
-        <div class="sub-keypad">
-            <button id="btn-repeat" class="nav-btn" onclick="toggleRepeat()">Repeat<br>Off</button>
-            <button id="btn-0" class="btn btn-zero" onclick="playAudio(0)">0</button>
-            <div></div> <!-- Empty slot to align 0 perfectly under 8 -->
+        <div class="footer-buttons">
+            <button id="btn-repeat" class="action-btn" onclick="toggleRepeat()">Repeat: Off</button>
+            <button id="btn-0" class="action-btn" onclick="playAudio(0)">Closing Prayers</button>
         </div>
         
         <button id="btn-next" class="giant-btn" onclick="playNext()">Play Next</button>
         
+        <div class="subtitle">1-9: Salutations</div>
         <div id="status"></div>
     </div>
 
@@ -344,7 +336,10 @@
 
         function updateButtonColors(activeId) {
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') btn.classList.remove('active-prayer');
+                // Ensure the Reset and Repeat buttons don't lose their specific stylings
+                if (btn.id !== 'btn-reset' && btn.id !== 'btn-repeat') {
+                    btn.classList.remove('active-prayer');
+                }
             });
             if (activeId !== null) {
                 const btn = document.getElementById(`btn-${activeId}`);
@@ -367,10 +362,10 @@
             isRepeatOn = !isRepeatOn;
             const btn = document.getElementById('btn-repeat');
             if (isRepeatOn) {
-                btn.innerHTML = "Repeat<br>On";
+                btn.innerText = "Repeat: On";
                 btn.classList.add('active-repeat');
             } else {
-                btn.innerHTML = "Repeat<br>Off";
+                btn.innerText = "Repeat: Off";
                 btn.classList.remove('active-repeat');
             }
         }
@@ -385,7 +380,7 @@
             releaseWakeLock(); 
             
             document.querySelectorAll('.btn, .action-btn').forEach(btn => {
-                if (btn.id !== 'btn-reset') {
+                if (btn.id !== 'btn-reset' && btn.id !== 'btn-repeat') {
                     btn.classList.remove('active-prayer');
                     btn.classList.remove('played-prayer');
                 }

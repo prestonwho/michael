@@ -69,16 +69,22 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
+        .action-btn:active { 
+            background-color: #e5e5ea; 
+        }
+        .btn:active { 
+            background-color: #e5e5ea; 
+        }
+        .giant-btn:active { 
+            background-color: #005bb5; 
+        }
+
         .action-btn, .btn {
             background-color: #ffffff;
             border: 1px solid #d1d1d6;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
         
-        .action-btn:active, .btn:active {
-            background-color: #e5e5ea;
-        }
-
         .action-btn {
             border-radius: 20px;
             padding: 12px 15px; 
@@ -113,8 +119,8 @@
             box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
         }
 
-        /* STOP BUTTON INSTANT FEEDBACK */
-        #btn-stop:active, .flash-blue {
+        /* STOP BUTTON FLASH STATE (triggered by JS on press) */
+        #btn-stop.flash-blue {
             background-color: #007aff !important;
             border-color: #007aff !important;
             color: #ffffff !important;
@@ -490,6 +496,30 @@
                     isPlaying = false;
                 });
             }
+        }
+
+        // Flash the stop button on press (mousedown/touchstart)
+        const stopBtn = document.getElementById('btn-stop');
+        if (stopBtn) {
+            stopBtn.addEventListener('mousedown', () => {
+                stopBtn.classList.add('flash-blue');
+            });
+            stopBtn.addEventListener('touchstart', () => {
+                stopBtn.classList.add('flash-blue');
+            });
+            // Remove the flash class after 200ms on release or cancel
+            stopBtn.addEventListener('mouseup', () => {
+                setTimeout(() => stopBtn.classList.remove('flash-blue'), 200);
+            });
+            stopBtn.addEventListener('mouseleave', () => {
+                setTimeout(() => stopBtn.classList.remove('flash-blue'), 200);
+            });
+            stopBtn.addEventListener('touchend', () => {
+                setTimeout(() => stopBtn.classList.remove('flash-blue'), 200);
+            });
+            stopBtn.addEventListener('touchcancel', () => {
+                setTimeout(() => stopBtn.classList.remove('flash-blue'), 200);
+            });
         }
     </script>
 </body>

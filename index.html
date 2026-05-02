@@ -61,24 +61,10 @@
 
         .action-btn, .btn, .giant-btn {
             -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s ease;
+            transition: all 0.1s ease;
         }
 
-        .action-btn:active, .btn:active, .giant-btn:active {
-            transform: scale(0.94);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .action-btn:active { 
-            background-color: #e5e5ea; 
-        }
-        .btn:active { 
-            background-color: #e5e5ea; 
-        }
-        .giant-btn:active { 
-            background-color: #005bb5; 
-        }
-
+        /* Base styles */
         .action-btn, .btn {
             background-color: #ffffff;
             border: 1px solid #d1d1d6;
@@ -124,6 +110,17 @@
             background-color: #007aff !important;
             border-color: #007aff !important;
             color: #ffffff !important;
+        }
+
+        /* PRESSED FEEDBACK (applied via JS) */
+        .action-btn.pressed,
+        .btn.pressed {
+            background-color: #e5e5ea;
+            transform: scale(0.94);
+        }
+        .giant-btn.pressed {
+            background-color: #005bb5;
+            transform: scale(0.94);
         }
 
         /* PAUSED STATE (Breathing Animation) */
@@ -175,10 +172,6 @@
             text-transform: uppercase;
             box-shadow: 0 6px 15px rgba(0, 122, 255, 0.35);
             cursor: pointer;
-        }
-
-        .giant-btn:active {
-            background-color: #005bb5;
         }
 
         #status {
@@ -498,7 +491,25 @@
             }
         }
 
-        // Flash the stop button on press (mousedown/touchstart)
+        // ====== RELIABLE BUTTON PRESS FEEDBACK ======
+        function initButtonFeedback() {
+            const buttons = document.querySelectorAll('.action-btn, .btn, .giant-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('pointerdown', () => btn.classList.add('pressed'));
+                btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
+                btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+                btn.addEventListener('pointerleave', () => btn.classList.remove('pressed'));
+            });
+        }
+        
+        // Initialize after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initButtonFeedback);
+        } else {
+            initButtonFeedback();
+        }
+
+        // Flash the stop button on press (mousedown/touchstart) - keep for extra flash effect
         const stopBtn = document.getElementById('btn-stop');
         if (stopBtn) {
             stopBtn.addEventListener('mousedown', () => {
